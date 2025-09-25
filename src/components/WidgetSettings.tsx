@@ -31,7 +31,8 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
 
   const fetchConfig = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/widget-config');
+      const API_URL = import.meta.env.VITE_API_URL || 'https://mapsy-api.nextechspires.com/api';
+      const response = await fetch(`${API_URL}/widget-config`);
       const data = await response.json();
       setConfig(data);
     } catch (error) {
@@ -42,7 +43,8 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
   const saveConfig = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/api/widget-config', {
+      const API_URL = import.meta.env.VITE_API_URL || 'https://mapsy-api.nextechspires.com/api';
+      const response = await fetch(`${API_URL}/widget-config`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

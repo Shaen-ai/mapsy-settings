@@ -36,7 +36,8 @@ function WidgetSettingsCompact() {
   const fetchConfig = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/widget-config`);
+      const API_URL = import.meta.env.VITE_API_URL || 'https://mapsy-api.nextechspires.com/api';
+      const response = await fetch(`${API_URL}/widget-config`);
       if (response.ok) {
         const data = await response.json();
         setConfig(data);
@@ -52,7 +53,8 @@ function WidgetSettingsCompact() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/widget-config`, {
+      const API_URL = import.meta.env.VITE_API_URL || 'https://mapsy-api.nextechspires.com/api';
+      const response = await fetch(`${API_URL}/widget-config`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
