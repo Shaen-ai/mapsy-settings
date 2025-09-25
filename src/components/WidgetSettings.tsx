@@ -66,7 +66,7 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
     }
   };
 
-  const previewUrl = `http://localhost:5174?preview=true`;
+  const previewUrl = `https://mapsy-widget.nextechspires.com/demo.html?preview=true`;
 
   return (
     <div className="bg-white rounded-lg p-6">
