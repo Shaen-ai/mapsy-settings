@@ -1,6 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// Generate unique build ID based on timestamp
+const buildId = Date.now().toString(36)
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -14,9 +17,9 @@ export default defineConfig({
         compact: './compact.html',
       },
       output: {
-        entryFileNames: 'assets/[name].[hash].js',
-        chunkFileNames: 'assets/[name].[hash].js',
-        assetFileNames: 'assets/[name].[hash].[ext]'
+        entryFileNames: `assets/[name].${buildId}.js`,
+        chunkFileNames: `assets/[name].${buildId}.js`,
+        assetFileNames: `assets/[name].${buildId}.[ext]`
       }
     },
   },
