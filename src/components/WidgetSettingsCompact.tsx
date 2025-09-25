@@ -84,59 +84,59 @@ function WidgetSettingsCompact() {
   }
 
   return (
-    <div className="h-full flex flex-col p-4">
+    <div className="h-full flex flex-col p-3 bg-gradient-to-br from-gray-50 to-white">
       {/* Header */}
-      <div className="mb-4 pb-3 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900">Widget Settings</h2>
+      <div className="mb-3 pb-2 border-b border-gray-100">
+        <h2 className="text-base font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Widget Settings</h2>
       </div>
 
       {/* Settings Form - Scrollable */}
-      <div className="flex-1 overflow-y-auto pr-2" style={{ maxHeight: '310px' }}>
+      <div className="flex-1 overflow-y-auto pr-1 space-y-3" style={{ maxHeight: '310px' }}>
         {/* Default View */}
-        <div className="mb-4">
-          <label className="block text-xs font-medium text-gray-700 mb-2">
+        <div className="bg-white/70 rounded-lg p-2.5 border border-gray-100">
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">
             Default View
           </label>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-1.5">
             <button
               onClick={() => setConfig({ ...config, defaultView: 'map' })}
-              className={`flex-1 flex items-center justify-center px-3 py-2 text-xs rounded-md border transition-colors ${
+              className={`flex items-center justify-center px-2 py-1.5 text-xs rounded-md border transition-all ${
                 config.defaultView === 'map'
-                  ? 'bg-blue-50 border-blue-300 text-blue-700'
-                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-400 text-blue-700 font-medium shadow-sm'
+                  : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
               }`}
             >
-              <FiMap className="mr-1.5 h-3 w-3" />
+              <FiMap className="mr-1 h-3 w-3" />
               Map
             </button>
             <button
               onClick={() => setConfig({ ...config, defaultView: 'list' })}
-              className={`flex-1 flex items-center justify-center px-3 py-2 text-xs rounded-md border transition-colors ${
+              className={`flex items-center justify-center px-2 py-1.5 text-xs rounded-md border transition-all ${
                 config.defaultView === 'list'
-                  ? 'bg-blue-50 border-blue-300 text-blue-700'
-                  : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-400 text-blue-700 font-medium shadow-sm'
+                  : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
               }`}
             >
-              <FiList className="mr-1.5 h-3 w-3" />
+              <FiList className="mr-1 h-3 w-3" />
               List
             </button>
           </div>
         </div>
 
         {/* Show Header */}
-        <div className="mb-4">
+        <div className="bg-white/70 rounded-lg p-2.5 border border-gray-100">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-gray-700">
-              Show Header
+            <label className="text-xs font-semibold text-gray-600">
+              Widget Header
             </label>
             <button
               onClick={() => setConfig({ ...config, showHeader: !config.showHeader })}
-              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                config.showHeader ? 'bg-blue-600' : 'bg-gray-300'
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all ${
+                config.showHeader ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-gray-300'
               }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
                   config.showHeader ? 'translate-x-5' : 'translate-x-0.5'
                 }`}
               />
@@ -146,24 +146,24 @@ function WidgetSettingsCompact() {
 
         {/* Header Title */}
         {config.showHeader && (
-          <div className="mb-4">
-            <label className="block text-xs font-medium text-gray-700 mb-1">
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-2.5 border border-blue-100 animate-fadeIn">
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">
               Header Title
             </label>
             <input
               type="text"
               value={config.headerTitle}
               onChange={(e) => setConfig({ ...config, headerTitle: e.target.value })}
-              className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Enter header title"
+              className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white/80"
+              placeholder="Enter title"
             />
           </div>
         )}
 
         {/* Map Zoom Level */}
-        <div className="mb-4">
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Map Zoom Level
+        <div className="bg-white/70 rounded-lg p-2.5 border border-gray-100">
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            Zoom Level
           </label>
           <div className="flex items-center gap-2">
             <input
@@ -172,32 +172,35 @@ function WidgetSettingsCompact() {
               max="18"
               value={config.mapZoomLevel}
               onChange={(e) => setConfig({ ...config, mapZoomLevel: parseInt(e.target.value) })}
-              className="flex-1"
+              className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              style={{
+                background: `linear-gradient(to right, rgb(59 130 246) 0%, rgb(59 130 246) ${((config.mapZoomLevel - 8) * 10)}%, rgb(229 231 235) ${((config.mapZoomLevel - 8) * 10)}%, rgb(229 231 235) 100%)`
+              }}
             />
-            <span className="text-xs font-medium text-gray-600 w-6 text-center">
+            <span className="text-xs font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
               {config.mapZoomLevel}
             </span>
           </div>
         </div>
 
         {/* Primary Color */}
-        <div className="mb-4">
-          <label className="block text-xs font-medium text-gray-700 mb-2">
-            Primary Color
+        <div className="bg-white/70 rounded-lg p-2.5 border border-gray-100">
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            Theme Color
           </label>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             {colorOptions.map((color) => (
               <button
                 key={color.value}
                 onClick={() => setConfig({ ...config, primaryColor: color.value })}
-                className={`relative w-8 h-8 rounded-md ${color.class} transition-transform ${
-                  config.primaryColor === color.value ? 'ring-2 ring-offset-2 ring-blue-500 scale-110' : ''
+                className={`relative w-7 h-7 rounded-md ${color.class} transition-all hover:scale-110 ${
+                  config.primaryColor === color.value ? 'ring-2 ring-offset-1 ring-blue-400 scale-110' : ''
                 }`}
                 title={color.label}
               >
                 {config.primaryColor === color.value && (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
                       <path
                         fillRule="evenodd"
                         d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
@@ -211,45 +214,23 @@ function WidgetSettingsCompact() {
           </div>
         </div>
 
-        {/* Preview Section */}
-        <div className="mb-4 p-3 bg-gray-50 rounded-md border border-gray-200">
-          <h3 className="text-xs font-medium text-gray-700 mb-2">Preview Settings</h3>
-          <div className="space-y-1 text-xs text-gray-600">
-            <div className="flex items-center">
-              {config.defaultView === 'map' ? <FiMap className="mr-1.5 h-3 w-3" /> : <FiList className="mr-1.5 h-3 w-3" />}
-              <span>Default: {config.defaultView === 'map' ? 'Map View' : 'List View'}</span>
-            </div>
-            <div className="flex items-center">
-              {config.showHeader ? <FiEye className="mr-1.5 h-3 w-3" /> : <FiEyeOff className="mr-1.5 h-3 w-3" />}
-              <span>Header: {config.showHeader ? `"${config.headerTitle}"` : 'Hidden'}</span>
-            </div>
-            <div>Zoom: Level {config.mapZoomLevel}</div>
-            <div className="flex items-center">
-              <span>Color:</span>
-              <span
-                className="ml-1.5 inline-block w-3 h-3 rounded"
-                style={{ backgroundColor: config.primaryColor }}
-              />
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Save Button - Fixed at bottom */}
-      <div className="mt-auto pt-3 border-t border-gray-200">
+      <div className="mt-auto pt-2 border-t border-gray-100">
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full flex items-center justify-center px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full flex items-center justify-center px-3 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-semibold rounded-lg hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
         >
           {saving ? (
             <>
-              <FiRefreshCw className="animate-spin mr-2 h-4 w-4" />
+              <FiRefreshCw className="animate-spin mr-1.5 h-3.5 w-3.5" />
               Saving...
             </>
           ) : (
             <>
-              <FiSave className="mr-2 h-4 w-4" />
+              <FiSave className="mr-1.5 h-3.5 w-3.5" />
               Save Settings
             </>
           )}
