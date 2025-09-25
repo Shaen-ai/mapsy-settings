@@ -66,8 +66,6 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
     }
   };
 
-  const previewUrl = `https://mapsy-widget.nextechspires.com/demo.html?preview=true`;
-
   return (
     <div className="p-8">
       <div className="space-y-5">

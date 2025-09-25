@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FiSave, FiRefreshCw, FiMap, FiList, FiEye, FiEyeOff } from 'react-icons/fi';
+import { FiSave, FiRefreshCw, FiMap, FiList } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 interface WidgetConfig {
