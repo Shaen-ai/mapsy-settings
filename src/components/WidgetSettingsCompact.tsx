@@ -50,6 +50,32 @@ function WidgetSettingsCompact() {
     }
   };
 
+  // Broadcast config changes for real-time updates
+  const broadcastConfigChange = (updatedConfig: WidgetConfig) => {
+    // Store in localStorage for persistence
+    localStorage.setItem('mapsy-widget-config', JSON.stringify(updatedConfig));
+
+    // Broadcast via storage event for cross-tab/iframe communication
+    const event = new StorageEvent('storage', {
+      key: 'mapsy-widget-config',
+      newValue: JSON.stringify(updatedConfig),
+      url: window.location.href,
+      storageArea: localStorage
+    });
+    window.dispatchEvent(event);
+
+    // Also broadcast via custom event for same-window communication
+    window.dispatchEvent(new CustomEvent('mapsy-config-update', {
+      detail: updatedConfig
+    }));
+  };
+
+  // Update config and broadcast changes
+  const updateConfigWithBroadcast = (newConfig: WidgetConfig) => {
+    setConfig(newConfig);
+    broadcastConfigChange(newConfig);
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -64,6 +90,8 @@ function WidgetSettingsCompact() {
 
       if (response.ok) {
         toast.success('Settings saved!');
+        // Broadcast the saved config
+        broadcastConfigChange(config);
       } else {
         throw new Error('Failed to save');
       }
