@@ -2,6 +2,15 @@ import { useState, useEffect } from 'react';
 import { FiSave, FiRefreshCw, FiMap, FiList, FiExternalLink } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
+// Wix SDK types (we'll check if they exist at runtime)
+declare global {
+  interface Window {
+    createClient?: any;
+    editor?: any;
+    widget?: any;
+  }
+}
+
 interface WidgetConfig {
   defaultView: 'map' | 'list';
   showHeader: boolean;
@@ -28,9 +37,26 @@ function WidgetSettingsCompact() {
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [wixClient, setWixClient] = useState<any>(null);
 
   useEffect(() => {
     fetchConfig();
+
+    // Initialize Wix client if available
+    if ((window as any).createClient && (window as any).editor && (window as any).widget) {
+      try {
+        const client = (window as any).createClient({
+          host: (window as any).editor.host(),
+          modules: { widget: (window as any).widget },
+        });
+        setWixClient(client);
+        console.log('[Settings] Wix client initialized');
+      } catch (error) {
+        console.log('[Settings] Could not initialize Wix client:', error);
+      }
+    } else {
+      console.log('[Settings] Wix SDK not available');
+    }
   }, []);
 
   const fetchConfig = async () => {
@@ -58,56 +84,49 @@ function WidgetSettingsCompact() {
     localStorage.setItem('mapsy-widget-config', JSON.stringify(updatedConfig));
     console.log('[Settings] Saved to localStorage:', localStorage.getItem('mapsy-widget-config'));
 
-    // Create a global config updater if it doesn't exist
-    if (!(window as any).__mapsyConfigListeners) {
-      (window as any).__mapsyConfigListeners = [];
-    }
-
-    // Call all registered listeners
-    const listeners = (window as any).__mapsyConfigListeners;
-    console.log(`[Settings] Calling ${listeners.length} registered listeners`);
-    listeners.forEach((listener: (config: WidgetConfig) => void) => {
+    // Use Wix SDK client if available
+    if (wixClient && wixClient.widget) {
       try {
-        listener(updatedConfig);
+        // Use Wix SDK setProp for each property
+        Object.keys(updatedConfig).forEach(key => {
+          const value = (updatedConfig as any)[key];
+          wixClient.widget.setProp(key, value);
+          console.log(`[Settings] wixClient.widget.setProp('${key}', ${JSON.stringify(value)})`);
+        });
+
+        // Also set the entire config as a JSON string attribute
+        wixClient.widget.setProp('config', JSON.stringify(updatedConfig));
+        console.log('[Settings] wixClient.widget.setProp("config", ...full config...)');
       } catch (error) {
-        console.error('[Settings] Error calling listener:', error);
+        console.error('[Settings] Error using wixClient.widget.setProp:', error);
       }
-    });
-
-    // Also try parent window's listeners
-    if (window.parent && window.parent !== window && (window.parent as any).__mapsyConfigListeners) {
-      const parentListeners = (window.parent as any).__mapsyConfigListeners;
-      console.log(`[Settings] Calling ${parentListeners.length} parent window listeners`);
-      parentListeners.forEach((listener: (config: WidgetConfig) => void) => {
-        try {
-          listener(updatedConfig);
-        } catch (error) {
-          console.error('[Settings] Error calling parent listener:', error);
-        }
-      });
+    }
+    // Fallback to old Wix API if available
+    else if ((window as any).Wix && (window as any).Wix.Settings) {
+      try {
+        Object.keys(updatedConfig).forEach(key => {
+          const value = (updatedConfig as any)[key];
+          (window as any).Wix.Settings.setProp(key, value);
+          console.log(`[Settings] Wix.Settings.setProp('${key}', ${JSON.stringify(value)})`);
+        });
+      } catch (error) {
+        console.error('[Settings] Error using Wix.Settings.setProp:', error);
+      }
     }
 
-    // Also try top window's listeners
-    if (window.top && window.top !== window && (window.top as any).__mapsyConfigListeners) {
-      const topListeners = (window.top as any).__mapsyConfigListeners;
-      console.log(`[Settings] Calling ${topListeners.length} top window listeners`);
-      topListeners.forEach((listener: (config: WidgetConfig) => void) => {
-        try {
-          listener(updatedConfig);
-        } catch (error) {
-          console.error('[Settings] Error calling top listener:', error);
-        }
-      });
+    // Send postMessage to parent window (cross-origin safe) for non-Wix environments
+    if (window.parent && window.parent !== window) {
+      try {
+        window.parent.postMessage({
+          type: 'mapsy-config-update',
+          config: updatedConfig,
+          source: 'mapsy-settings'
+        }, '*');
+        console.log('[Settings] Sent postMessage to parent window');
+      } catch (error) {
+        console.error('[Settings] Error sending to parent:', error);
+      }
     }
-
-    // Dispatch custom event on window for same-window communication
-    const event = new CustomEvent('mapsy-config-update', {
-      detail: updatedConfig,
-      bubbles: true,
-      composed: true
-    });
-    window.dispatchEvent(event);
-    console.log('[Settings] Dispatched CustomEvent on window');
   };
 
   // Update config and broadcast changes
