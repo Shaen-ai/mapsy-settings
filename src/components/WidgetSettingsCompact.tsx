@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FiSave, FiRefreshCw, FiMap, FiList } from 'react-icons/fi';
+import { FiSave, FiRefreshCw, FiMap, FiList, FiExternalLink } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 interface WidgetConfig {
@@ -85,8 +85,21 @@ function WidgetSettingsCompact() {
 
   return (
     <div className="h-full flex flex-col p-3 bg-gradient-to-br from-gray-50 to-white">
+      {/* Header with Dashboard Button */}
+      <div className="mb-3 pb-2 border-b border-gray-100 flex items-center justify-end">
+        <a
+          href="https://mapsy-dashboard.nextechspires.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center px-2 py-1 text-xs bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:from-blue-700 hover:to-purple-700 transition-all"
+        >
+          <FiExternalLink className="mr-1 h-3 w-3" />
+          Dashboard
+        </a>
+      </div>
+
       {/* Settings Form - Scrollable */}
-      <div className="flex-1 overflow-y-auto pr-1 space-y-3" style={{ maxHeight: '340px' }}>
+      <div className="flex-1 overflow-y-auto pr-1 space-y-3" style={{ maxHeight: '310px' }}>
         {/* Default View */}
         <div className="bg-white/70 rounded-lg p-2.5 border border-gray-100">
           <label className="block text-xs font-semibold text-gray-600 mb-1.5">
