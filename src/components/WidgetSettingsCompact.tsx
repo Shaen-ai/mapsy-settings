@@ -52,8 +52,11 @@ function WidgetSettingsCompact() {
 
   // Broadcast config changes for real-time updates
   const broadcastConfigChange = (updatedConfig: WidgetConfig) => {
+    console.log('[Settings] Broadcasting config change:', updatedConfig);
+
     // Store in localStorage for persistence
     localStorage.setItem('mapsy-widget-config', JSON.stringify(updatedConfig));
+    console.log('[Settings] Saved to localStorage:', localStorage.getItem('mapsy-widget-config'));
 
     // Broadcast via storage event for cross-tab/iframe communication
     const event = new StorageEvent('storage', {
@@ -63,15 +66,18 @@ function WidgetSettingsCompact() {
       storageArea: localStorage
     });
     window.dispatchEvent(event);
+    console.log('[Settings] Dispatched StorageEvent');
 
     // Also broadcast via custom event for same-window communication
     window.dispatchEvent(new CustomEvent('mapsy-config-update', {
       detail: updatedConfig
     }));
+    console.log('[Settings] Dispatched CustomEvent: mapsy-config-update');
   };
 
   // Update config and broadcast changes
   const updateConfigWithBroadcast = (newConfig: WidgetConfig) => {
+    console.log('[Settings] updateConfigWithBroadcast called with:', newConfig);
     setConfig(newConfig);
     broadcastConfigChange(newConfig);
   };
