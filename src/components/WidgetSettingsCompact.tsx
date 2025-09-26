@@ -1,15 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FiSave, FiRefreshCw, FiMap, FiList, FiExternalLink } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-
-// Wix SDK types (we'll check if they exist at runtime)
-declare global {
-  interface Window {
-    createClient?: any;
-    editor?: any;
-    widget?: any;
-  }
-}
+import { initializeWixClient, updateWidgetConfig, isWixEnvironment } from '../wix-integration';
 
 interface WidgetConfig {
   defaultView: 'map' | 'list';
@@ -37,26 +29,13 @@ function WidgetSettingsCompact() {
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [wixClient, setWixClient] = useState<any>(null);
 
   useEffect(() => {
     fetchConfig();
 
-    // Initialize Wix client if available
-    if ((window as any).createClient && (window as any).editor && (window as any).widget) {
-      try {
-        const client = (window as any).createClient({
-          host: (window as any).editor.host(),
-          modules: { widget: (window as any).widget },
-        });
-        setWixClient(client);
-        console.log('[Settings] Wix client initialized');
-      } catch (error) {
-        console.log('[Settings] Could not initialize Wix client:', error);
-      }
-    } else {
-      console.log('[Settings] Wix SDK not available');
-    }
+    // Initialize Wix client on mount
+    initializeWixClient();
+    console.log('[Settings] Wix environment:', isWixEnvironment() ? 'Yes' : 'No');
   }, []);
 
   const fetchConfig = async () => {
@@ -84,48 +63,12 @@ function WidgetSettingsCompact() {
     localStorage.setItem('mapsy-widget-config', JSON.stringify(updatedConfig));
     console.log('[Settings] Saved to localStorage:', localStorage.getItem('mapsy-widget-config'));
 
-    // Use Wix SDK client if available
-    if (wixClient && wixClient.widget) {
-      try {
-        // Use Wix SDK setProp for each property
-        Object.keys(updatedConfig).forEach(key => {
-          const value = (updatedConfig as any)[key];
-          wixClient.widget.setProp(key, value);
-          console.log(`[Settings] wixClient.widget.setProp('${key}', ${JSON.stringify(value)})`);
-        });
-
-        // Also set the entire config as a JSON string attribute
-        wixClient.widget.setProp('config', JSON.stringify(updatedConfig));
-        console.log('[Settings] wixClient.widget.setProp("config", ...full config...)');
-      } catch (error) {
-        console.error('[Settings] Error using wixClient.widget.setProp:', error);
-      }
-    }
-    // Fallback to old Wix API if available
-    else if ((window as any).Wix && (window as any).Wix.Settings) {
-      try {
-        Object.keys(updatedConfig).forEach(key => {
-          const value = (updatedConfig as any)[key];
-          (window as any).Wix.Settings.setProp(key, value);
-          console.log(`[Settings] Wix.Settings.setProp('${key}', ${JSON.stringify(value)})`);
-        });
-      } catch (error) {
-        console.error('[Settings] Error using Wix.Settings.setProp:', error);
-      }
-    }
-
-    // Send postMessage to parent window (cross-origin safe) for non-Wix environments
-    if (window.parent && window.parent !== window) {
-      try {
-        window.parent.postMessage({
-          type: 'mapsy-config-update',
-          config: updatedConfig,
-          source: 'mapsy-settings'
-        }, '*');
-        console.log('[Settings] Sent postMessage to parent window');
-      } catch (error) {
-        console.error('[Settings] Error sending to parent:', error);
-      }
+    // Use Wix SDK to update widget properties
+    const success = updateWidgetConfig(updatedConfig);
+    if (success) {
+      console.log('[Settings] Successfully updated widget via Wix SDK');
+    } else {
+      console.log('[Settings] Wix SDK not available');
     }
   };
 
