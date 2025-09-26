@@ -85,13 +85,8 @@ function WidgetSettingsCompact() {
 
   return (
     <div className="h-full flex flex-col p-3 bg-gradient-to-br from-gray-50 to-white">
-      {/* Header */}
-      <div className="mb-3 pb-2 border-b border-gray-100">
-        <h2 className="text-base font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Widget Settings</h2>
-      </div>
-
       {/* Settings Form - Scrollable */}
-      <div className="flex-1 overflow-y-auto pr-1 space-y-3" style={{ maxHeight: '310px' }}>
+      <div className="flex-1 overflow-y-auto pr-1 space-y-3" style={{ maxHeight: '340px' }}>
         {/* Default View */}
         <div className="bg-white/70 rounded-lg p-2.5 border border-gray-100">
           <label className="block text-xs font-semibold text-gray-600 mb-1.5">
@@ -127,7 +122,7 @@ function WidgetSettingsCompact() {
         <div className="bg-white/70 rounded-lg p-2.5 border border-gray-100">
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-gray-600">
-              Widget Header
+              Show Widget Header
             </label>
             <button
               onClick={() => setConfig({ ...config, showHeader: !config.showHeader })}
