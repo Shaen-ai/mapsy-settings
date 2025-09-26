@@ -58,6 +58,48 @@ function WidgetSettingsCompact() {
     localStorage.setItem('mapsy-widget-config', JSON.stringify(updatedConfig));
     console.log('[Settings] Saved to localStorage:', localStorage.getItem('mapsy-widget-config'));
 
+    // Create a global config updater if it doesn't exist
+    if (!(window as any).__mapsyConfigListeners) {
+      (window as any).__mapsyConfigListeners = [];
+    }
+
+    // Call all registered listeners
+    const listeners = (window as any).__mapsyConfigListeners;
+    console.log(`[Settings] Calling ${listeners.length} registered listeners`);
+    listeners.forEach((listener: (config: WidgetConfig) => void) => {
+      try {
+        listener(updatedConfig);
+      } catch (error) {
+        console.error('[Settings] Error calling listener:', error);
+      }
+    });
+
+    // Also try parent window's listeners
+    if (window.parent && window.parent !== window && (window.parent as any).__mapsyConfigListeners) {
+      const parentListeners = (window.parent as any).__mapsyConfigListeners;
+      console.log(`[Settings] Calling ${parentListeners.length} parent window listeners`);
+      parentListeners.forEach((listener: (config: WidgetConfig) => void) => {
+        try {
+          listener(updatedConfig);
+        } catch (error) {
+          console.error('[Settings] Error calling parent listener:', error);
+        }
+      });
+    }
+
+    // Also try top window's listeners
+    if (window.top && window.top !== window && (window.top as any).__mapsyConfigListeners) {
+      const topListeners = (window.top as any).__mapsyConfigListeners;
+      console.log(`[Settings] Calling ${topListeners.length} top window listeners`);
+      topListeners.forEach((listener: (config: WidgetConfig) => void) => {
+        try {
+          listener(updatedConfig);
+        } catch (error) {
+          console.error('[Settings] Error calling top listener:', error);
+        }
+      });
+    }
+
     // Dispatch custom event on window for same-window communication
     const event = new CustomEvent('mapsy-config-update', {
       detail: updatedConfig,
@@ -66,26 +108,6 @@ function WidgetSettingsCompact() {
     });
     window.dispatchEvent(event);
     console.log('[Settings] Dispatched CustomEvent on window');
-
-    // Also try dispatching on document
-    document.dispatchEvent(new CustomEvent('mapsy-config-update', {
-      detail: updatedConfig,
-      bubbles: true,
-      composed: true
-    }));
-    console.log('[Settings] Dispatched CustomEvent on document');
-
-    // If we're in Wix, try using Wix's setProp method
-    if ((window as any).Wix && typeof (window as any).Wix.Settings?.triggerSettingsUpdatedEvent === 'function') {
-      (window as any).Wix.Settings.triggerSettingsUpdatedEvent(updatedConfig);
-      console.log('[Settings] Called Wix.Settings.triggerSettingsUpdatedEvent');
-    }
-
-    // Try to directly update widget if it's available in the same window
-    if ((window as any).MapsyWidget && typeof (window as any).MapsyWidget.updateConfig === 'function') {
-      (window as any).MapsyWidget.updateConfig(updatedConfig);
-      console.log('[Settings] Called MapsyWidget.updateConfig directly');
-    }
   };
 
   // Update config and broadcast changes
