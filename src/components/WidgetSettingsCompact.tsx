@@ -58,21 +58,34 @@ function WidgetSettingsCompact() {
     localStorage.setItem('mapsy-widget-config', JSON.stringify(updatedConfig));
     console.log('[Settings] Saved to localStorage:', localStorage.getItem('mapsy-widget-config'));
 
-    // Broadcast via storage event for cross-tab/iframe communication
-    const event = new StorageEvent('storage', {
-      key: 'mapsy-widget-config',
-      newValue: JSON.stringify(updatedConfig),
-      url: window.location.href,
-      storageArea: localStorage
+    // Dispatch custom event on window for same-window communication
+    const event = new CustomEvent('mapsy-config-update', {
+      detail: updatedConfig,
+      bubbles: true,
+      composed: true
     });
     window.dispatchEvent(event);
-    console.log('[Settings] Dispatched StorageEvent');
+    console.log('[Settings] Dispatched CustomEvent on window');
 
-    // Also broadcast via custom event for same-window communication
-    window.dispatchEvent(new CustomEvent('mapsy-config-update', {
-      detail: updatedConfig
+    // Also try dispatching on document
+    document.dispatchEvent(new CustomEvent('mapsy-config-update', {
+      detail: updatedConfig,
+      bubbles: true,
+      composed: true
     }));
-    console.log('[Settings] Dispatched CustomEvent: mapsy-config-update');
+    console.log('[Settings] Dispatched CustomEvent on document');
+
+    // If we're in Wix, try using Wix's setProp method
+    if ((window as any).Wix && typeof (window as any).Wix.Settings?.triggerSettingsUpdatedEvent === 'function') {
+      (window as any).Wix.Settings.triggerSettingsUpdatedEvent(updatedConfig);
+      console.log('[Settings] Called Wix.Settings.triggerSettingsUpdatedEvent');
+    }
+
+    // Try to directly update widget if it's available in the same window
+    if ((window as any).MapsyWidget && typeof (window as any).MapsyWidget.updateConfig === 'function') {
+      (window as any).MapsyWidget.updateConfig(updatedConfig);
+      console.log('[Settings] Called MapsyWidget.updateConfig directly');
+    }
   };
 
   // Update config and broadcast changes
