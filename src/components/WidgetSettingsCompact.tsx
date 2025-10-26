@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FiSave, FiRefreshCw, FiMap, FiList, FiExternalLink } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { initializeWixClient, updateWidgetConfig, isWixEnvironment } from '../wix-integration';
+import { initializeWixClient, updateWidgetConfig, isWixEnvironment, getDashboardUrl, getInstanceToken, getCompId } from '../wix-integration';
 
 interface WidgetConfig {
   defaultView: 'map' | 'list';
@@ -42,7 +42,24 @@ function WidgetSettingsCompact() {
     try {
       setLoading(true);
       const API_URL = import.meta.env.VITE_API_URL || 'https://mapsy-api.nextechspires.com/api';
-      const response = await fetch(`${API_URL}/widget-config`);
+
+      // Get Wix authentication data
+      const instanceToken = getInstanceToken();
+      const compId = getCompId();
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+
+      if (instanceToken) {
+        headers['Authorization'] = `Bearer ${instanceToken}`;
+      }
+
+      if (compId) {
+        headers['X-Wix-Comp-Id'] = compId;
+      }
+
+      const response = await fetch(`${API_URL}/widget-config`, { headers });
       if (response.ok) {
         const data = await response.json();
         setConfig(data);
@@ -83,11 +100,26 @@ function WidgetSettingsCompact() {
     try {
       setSaving(true);
       const API_URL = import.meta.env.VITE_API_URL || 'https://mapsy-api.nextechspires.com/api';
+
+      // Get Wix authentication data
+      const instanceToken = getInstanceToken();
+      const compId = getCompId();
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+
+      if (instanceToken) {
+        headers['Authorization'] = `Bearer ${instanceToken}`;
+      }
+
+      if (compId) {
+        headers['X-Wix-Comp-Id'] = compId;
+      }
+
       const response = await fetch(`${API_URL}/widget-config`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(config),
       });
 
@@ -119,7 +151,7 @@ function WidgetSettingsCompact() {
       {/* Header with Dashboard Button */}
       <div className="mb-3 pb-2 border-b border-gray-100 flex items-center justify-end">
         <a
-          href="https://mapsy-dashboard.nextechspires.com/"
+          href={getDashboardUrl()}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center px-2 py-1 text-xs bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:from-blue-700 hover:to-purple-700 transition-all"

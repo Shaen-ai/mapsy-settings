@@ -8,6 +8,8 @@ let editor: any = null;
 let widget: any = null;
 let createClient: any = null;
 let wixClient: any = null;
+let instanceToken: string | null = null;
+let compId: string | null = null;
 
 // Try to import Wix modules
 try {
@@ -27,17 +29,32 @@ try {
 /**
  * Initialize the Wix client
  */
-export function initializeWixClient() {
-  if (!createClient || !editor || !widget) {
+export async function initializeWixClient() {
+  if (!createClient) {
     console.log('[WixIntegration] Wix SDK not available');
     return null;
   }
 
   try {
-    wixClient = createClient({
-      host: editor.host(),
-      modules: { widget },
-    });
+    // Initialize Wix client for settings panel
+    if (editor && widget) {
+      wixClient = createClient({
+        host: editor.host(),
+        modules: { widget },
+      });
+    } else {
+      // Fallback for simpler client initialization
+      wixClient = await createClient({
+        auth: { anonymous: true },
+      });
+    }
+
+    // Get instance token for API authentication
+    if (wixClient && wixClient.auth && wixClient.auth.getInstanceToken) {
+      instanceToken = wixClient.auth.getInstanceToken();
+      console.log('[WixIntegration] Instance token retrieved');
+    }
+
     console.log('[WixIntegration] Wix client initialized successfully');
     return wixClient;
   } catch (error) {
@@ -99,6 +116,45 @@ export function getWixClient() {
  */
 export function isWixEnvironment() {
   return wixClient !== null;
+}
+
+/**
+ * Get the instance token for API authentication
+ */
+export function getInstanceToken() {
+  return instanceToken;
+}
+
+/**
+ * Set the component ID (if needed for tracking)
+ */
+export function setCompId(id: string) {
+  compId = id;
+  console.log('[WixIntegration] Component ID set:', id);
+}
+
+/**
+ * Get the component ID
+ */
+export function getCompId() {
+  return compId;
+}
+
+/**
+ * Build dashboard URL with instance and compID parameters
+ */
+export function getDashboardUrl(baseUrl: string = 'https://mapsy-dashboard.nextechspires.com/'): string {
+  const url = new URL(baseUrl);
+
+  if (instanceToken) {
+    url.searchParams.set('instance', instanceToken);
+  }
+
+  if (compId) {
+    url.searchParams.set('compId', compId);
+  }
+
+  return url.toString();
 }
 
 // Auto-initialize on module load

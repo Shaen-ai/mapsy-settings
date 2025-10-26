@@ -1,6 +1,7 @@
 import { Toaster } from 'react-hot-toast';
 import WidgetSettings from './components/WidgetSettings';
 import { FiSettings, FiLayout, FiCode } from 'react-icons/fi';
+import { getDashboardUrl } from './wix-integration';
 
 function App() {
   return (
@@ -33,7 +34,7 @@ function App() {
                 Preview
               </a>
               <a
-                href="https://mapsy-dashboard.nextechspires.com/"
+                href={getDashboardUrl()}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center px-3 py-1.5 text-sm bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-sm"
