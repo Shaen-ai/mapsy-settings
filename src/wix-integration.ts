@@ -42,6 +42,17 @@ export async function initializeWixClient() {
         host: editor.host(),
         modules: { widget },
       });
+
+      // Try to get compId from widget
+      try {
+        const widgetCompId = await widget.getCompId?.();
+        if (widgetCompId) {
+          compId = widgetCompId;
+          console.log('[WixIntegration] Component ID retrieved from widget:', compId);
+        }
+      } catch (err) {
+        console.log('[WixIntegration] Could not get compId from widget:', err);
+      }
     } else {
       // Fallback for simpler client initialization
       wixClient = await createClient({
@@ -55,7 +66,19 @@ export async function initializeWixClient() {
       console.log('[WixIntegration] Instance token retrieved');
     }
 
+    // Try to get compId from URL if not already set
+    if (!compId && typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlCompId = urlParams.get('compId');
+      if (urlCompId) {
+        compId = urlCompId;
+        console.log('[WixIntegration] Component ID retrieved from URL:', compId);
+      }
+    }
+
     console.log('[WixIntegration] Wix client initialized successfully');
+    console.log('[WixIntegration] Final state - Instance token:', instanceToken ? 'Available' : 'Not available');
+    console.log('[WixIntegration] Final state - Comp ID:', compId ? compId : 'Not available');
     return wixClient;
   } catch (error) {
     console.error('[WixIntegration] Failed to initialize Wix client:', error);

@@ -31,11 +31,16 @@ function WidgetSettingsCompact() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchConfig();
+    // Initialize Wix client on mount (async)
+    const init = async () => {
+      await initializeWixClient();
+      console.log('[Settings] Wix environment:', isWixEnvironment() ? 'Yes' : 'No');
+      console.log('[Settings] Instance token:', getInstanceToken() ? 'Available' : 'Not available');
+      console.log('[Settings] Comp ID:', getCompId() ? getCompId() : 'Not available');
+    };
 
-    // Initialize Wix client on mount
-    initializeWixClient();
-    console.log('[Settings] Wix environment:', isWixEnvironment() ? 'Yes' : 'No');
+    init();
+    fetchConfig();
   }, []);
 
   const fetchConfig = async () => {
@@ -150,15 +155,17 @@ function WidgetSettingsCompact() {
     <div className="h-full flex flex-col p-3 bg-gradient-to-br from-gray-50 to-white">
       {/* Header with Dashboard Button */}
       <div className="mb-3 pb-2 border-b border-gray-100 flex items-center justify-end">
-        <a
-          href={getDashboardUrl()}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center px-2 py-1 text-xs bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:from-blue-700 hover:to-purple-700 transition-all"
+        <button
+          onClick={() => {
+            const url = getDashboardUrl();
+            console.log('[Settings] Opening dashboard:', url);
+            window.open(url, '_blank');
+          }}
+          className="inline-flex items-center px-2 py-1 text-xs bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:from-blue-700 hover:to-purple-700 transition-all cursor-pointer"
         >
           <FiExternalLink className="mr-1 h-3 w-3" />
           Dashboard
-        </a>
+        </button>
       </div>
 
       {/* Settings Form - Scrollable */}

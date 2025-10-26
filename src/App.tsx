@@ -33,15 +33,17 @@ function App() {
                 <FiLayout className="mr-1.5 h-3.5 w-3.5" />
                 Preview
               </a>
-              <a
-                href={getDashboardUrl()}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center px-3 py-1.5 text-sm bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-sm"
+              <button
+                onClick={() => {
+                  const url = getDashboardUrl();
+                  console.log('[Settings] Opening dashboard:', url);
+                  window.open(url, '_blank');
+                }}
+                className="inline-flex items-center px-3 py-1.5 text-sm bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all shadow-sm cursor-pointer"
               >
                 <FiCode className="mr-1.5 h-3.5 w-3.5" />
                 Dashboard
-              </a>
+              </button>
             </div>
           </div>
         </div>
