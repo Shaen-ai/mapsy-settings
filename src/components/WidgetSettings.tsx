@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FiSave, FiEye, FiEyeOff, FiMap, FiList } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import { widgetConfigService } from '../services/api';
 
 interface WidgetConfig {
   defaultView: 'map' | 'list';
@@ -31,9 +32,7 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
 
   const fetchConfig = async () => {
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'https://mapsy-api.nextechspires.com/api';
-      const response = await fetch(`${API_URL}/widget-config`);
-      const data = await response.json();
+      const data = await widgetConfigService.getConfig();
       setConfig(data);
     } catch (error) {
       console.error('Error fetching widget config:', error);
@@ -43,21 +42,9 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
   const saveConfig = async () => {
     try {
       setLoading(true);
-      const API_URL = import.meta.env.VITE_API_URL || 'https://mapsy-api.nextechspires.com/api';
-      const response = await fetch(`${API_URL}/widget-config`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(config),
-      });
-
-      if (response.ok) {
-        toast.success('Widget settings saved successfully');
-        if (onClose) onClose();
-      } else {
-        toast.error('Failed to save widget settings');
-      }
+      await widgetConfigService.updateConfig(config);
+      toast.success('Widget settings saved successfully');
+      if (onClose) onClose();
     } catch (error) {
       toast.error('Error saving widget settings');
       console.error('Error saving widget config:', error);

@@ -68,3 +68,15 @@ export const locationService = {
     await api.delete(`/locations/${id}`);
   },
 };
+
+export const widgetConfigService = {
+  getConfig: async () => {
+    const response = await api.get('/widget-config');
+    return response.data;
+  },
+
+  updateConfig: async (config: Record<string, any>) => {
+    const response = await api.put('/widget-config', config);
+    return response.data;
+  },
+};

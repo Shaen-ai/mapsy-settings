@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FiSave, FiRefreshCw, FiMap, FiList, FiExternalLink } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { initializeWixClient, updateWidgetConfig, isWixEnvironment, getDashboardUrl, getInstanceToken, getCompId } from '../wix-integration';
+import { widgetConfigService } from '../services/api';
 
 interface WidgetConfig {
   defaultView: 'map' | 'list';
@@ -46,29 +47,8 @@ function WidgetSettingsCompact() {
   const fetchConfig = async () => {
     try {
       setLoading(true);
-      const API_URL = import.meta.env.VITE_API_URL || 'https://mapsy-api.nextechspires.com/api';
-
-      // Get Wix authentication data
-      const instanceToken = getInstanceToken();
-      const compId = getCompId();
-
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-
-      if (instanceToken) {
-        headers['Authorization'] = `Bearer ${instanceToken}`;
-      }
-
-      if (compId) {
-        headers['X-Wix-Comp-Id'] = compId;
-      }
-
-      const response = await fetch(`${API_URL}/widget-config`, { headers });
-      if (response.ok) {
-        const data = await response.json();
-        setConfig(data);
-      }
+      const data = await widgetConfigService.getConfig();
+      setConfig(data);
     } catch (error) {
       console.error('Error fetching config:', error);
       toast.error('Failed to load settings');
@@ -104,37 +84,9 @@ function WidgetSettingsCompact() {
   const handleSave = async () => {
     try {
       setSaving(true);
-      const API_URL = import.meta.env.VITE_API_URL || 'https://mapsy-api.nextechspires.com/api';
-
-      // Get Wix authentication data
-      const instanceToken = getInstanceToken();
-      const compId = getCompId();
-
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-
-      if (instanceToken) {
-        headers['Authorization'] = `Bearer ${instanceToken}`;
-      }
-
-      if (compId) {
-        headers['X-Wix-Comp-Id'] = compId;
-      }
-
-      const response = await fetch(`${API_URL}/widget-config`, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify(config),
-      });
-
-      if (response.ok) {
-        toast.success('Settings saved!');
-        // Broadcast the saved config
-        broadcastConfigChange(config);
-      } else {
-        throw new Error('Failed to save');
-      }
+      await widgetConfigService.updateConfig(config);
+      toast.success('Settings saved!');
+      broadcastConfigChange(config);
     } catch (error) {
       console.error('Error saving config:', error);
       toast.error('Failed to save settings');

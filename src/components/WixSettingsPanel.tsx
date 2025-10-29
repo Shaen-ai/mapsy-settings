@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FiSave, FiRefreshCw, FiMap, FiList, FiExternalLink } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import { widgetConfigService } from '../services/api';
 
 interface WidgetConfig {
   defaultView: 'map' | 'list';
@@ -74,12 +75,8 @@ function WixSettingsPanel() {
   const fetchConfig = async () => {
     try {
       setLoading(true);
-      const API_URL = import.meta.env.VITE_API_URL || 'https://mapsy-api.nextechspires.com/api';
-      const response = await fetch(`${API_URL}/widget-config`);
-      if (response.ok) {
-        const data = await response.json();
-        setConfig(data);
-      }
+      const data = await widgetConfigService.getConfig();
+      setConfig(data);
     } catch (error) {
       console.error('Error fetching config:', error);
     } finally {
@@ -122,26 +119,12 @@ function WixSettingsPanel() {
   const handleSave = async () => {
     try {
       setSaving(true);
+      await widgetConfigService.updateConfig(config);
+      toast.success('Settings saved!');
 
-      // Save to backend
-      const API_URL = import.meta.env.VITE_API_URL || 'https://mapsy-api.nextechspires.com/api';
-      const response = await fetch(`${API_URL}/widget-config`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(config),
-      });
-
-      if (response.ok) {
-        toast.success('Settings saved!');
-
-        // If in Wix, update all widget properties at once
-        if (window.Wix && window.Wix.Settings) {
-          window.Wix.Settings.triggerSettingsUpdatedEvent(config);
-        }
-      } else {
-        throw new Error('Failed to save');
+      // If in Wix, update all widget properties at once
+      if (window.Wix && window.Wix.Settings) {
+        window.Wix.Settings.triggerSettingsUpdatedEvent(config);
       }
     } catch (error) {
       console.error('Error saving config:', error);
