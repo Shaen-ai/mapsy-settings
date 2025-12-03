@@ -1,6 +1,9 @@
 /**
  * Wix Integration Helper
  * This module handles communication between the settings panel and widget using Wix SDK
+ *
+ * Per Wix docs: For dashboard/settings pages, initialize WixClient with
+ * editor.auth() and editor.host(), then use fetchWithAuth() for authenticated requests.
  */
 
 import { createClient } from '@wix/sdk';
@@ -26,6 +29,7 @@ function generateCompId(): string {
 
 /**
  * Initialize the Wix integration with proper context
+ * Uses editor.auth() and editor.host() as per Wix documentation
  */
 export async function initializeWixClient(): Promise<boolean> {
   if (isInitialized && wixClient) {
@@ -35,14 +39,19 @@ export async function initializeWixClient(): Promise<boolean> {
 
   try {
     console.log('[WixIntegration] Initializing with Wix SDK...');
+    console.log('[WixIntegration] editor.auth available:', !!editor.auth);
+    console.log('[WixIntegration] editor.host available:', !!editor.host);
 
-    // Create the Wix client with editor host - this establishes the context
+    // Create the Wix client with editor.auth() and editor.host()
+    // This is the recommended pattern for dashboard/settings pages
     wixClient = createClient({
+      auth: editor.auth(),
       host: editor.host(),
       modules: { widget },
     });
 
     console.log('[WixIntegration] Wix client created successfully');
+    console.log('[WixIntegration] fetchWithAuth available:', typeof wixClient.fetchWithAuth);
 
     // Try to get compId from widget props
     if (wixClient.widget && wixClient.widget.getProp) {
@@ -83,24 +92,10 @@ export async function initializeWixClient(): Promise<boolean> {
       }
     }
 
-    // Try to get instance token from auth
-    if (wixClient.auth) {
-      try {
-        // For editor extensions, we can get the app instance
-        const tokens = await wixClient.auth.getTokens();
-        if (tokens && tokens.accessToken) {
-          instanceToken = tokens.accessToken.value;
-          console.log('[WixIntegration] Got access token from auth');
-        }
-      } catch (err) {
-        console.log('[WixIntegration] Could not get tokens from auth:', err);
-      }
-    }
-
     isInitialized = true;
     console.log('[WixIntegration] Initialization complete');
-    console.log('[WixIntegration] Final state - Instance token:', instanceToken ? 'Available' : 'Not available');
     console.log('[WixIntegration] Final state - Comp ID:', compId || 'Not available');
+    console.log('[WixIntegration] fetchWithAuth ready for authenticated API calls');
     return true;
   } catch (error) {
     console.error('[WixIntegration] Failed to initialize:', error);
@@ -114,6 +109,50 @@ export async function initializeWixClient(): Promise<boolean> {
     isInitialized = true;
     return false;
   }
+}
+
+/**
+ * Fetch with Wix authentication
+ * Uses wixClient.fetchWithAuth() to automatically include access token
+ * The backend can extract instanceId from the token via Wix API
+ */
+export async function fetchWithAuth(url: string, options?: RequestInit): Promise<Response> {
+  console.log('[FetchWithAuth] Starting fetch to:', url);
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options?.headers as Record<string, string>),
+  };
+
+  // Add compId header if available
+  if (compId) {
+    headers['X-Wix-Comp-Id'] = compId;
+    console.log('[FetchWithAuth] Added X-Wix-Comp-Id header:', compId);
+  }
+
+  const fetchOptions: RequestInit = {
+    ...options,
+    headers,
+  };
+
+  // Use Wix authenticated fetch if available (recommended per Wix docs)
+  if (wixClient && wixClient.fetchWithAuth) {
+    console.log('[FetchWithAuth] Using wixClient.fetchWithAuth...');
+    try {
+      const response = await wixClient.fetchWithAuth(url, fetchOptions);
+      console.log('[FetchWithAuth] Response status:', response.status);
+      return response;
+    } catch (error: any) {
+      console.error('[FetchWithAuth] wixClient.fetchWithAuth failed:', error?.message);
+      console.log('[FetchWithAuth] Falling back to regular fetch...');
+    }
+  }
+
+  // Fallback to regular fetch
+  console.log('[FetchWithAuth] Using regular fetch (no auth)...');
+  const response = await fetch(url, fetchOptions);
+  console.log('[FetchWithAuth] Response status:', response.status);
+  return response;
 }
 
 /**
@@ -174,6 +213,7 @@ export function getWixClient() {
 
 /**
  * Get the instance token for API authentication
+ * Note: With fetchWithAuth, you don't need to manually handle tokens
  */
 export function getInstanceToken(): string | null {
   return instanceToken;

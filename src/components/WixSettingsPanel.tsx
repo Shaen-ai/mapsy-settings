@@ -1,15 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FiSave, FiRefreshCw, FiMap, FiList, FiExternalLink } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { widgetConfigService } from '../services/api';
-
-interface WidgetConfig {
-  defaultView: 'map' | 'list';
-  showHeader: boolean;
-  headerTitle: string;
-  mapZoomLevel: number;
-  primaryColor: string;
-}
+import { widgetConfigService, WidgetConfig } from '../services/api';
 
 // Declare Wix SDK types
 declare global {
@@ -33,6 +25,8 @@ function WixSettingsPanel() {
     headerTitle: 'Our Locations',
     mapZoomLevel: 12,
     primaryColor: '#3B82F6',
+    showWidgetName: false,
+    widgetName: '',
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -57,6 +51,8 @@ function WixSettingsPanel() {
           headerTitle: currentSettings.headerTitle || 'Our Locations',
           mapZoomLevel: currentSettings.mapZoomLevel || 12,
           primaryColor: currentSettings.primaryColor || '#3B82F6',
+          showWidgetName: currentSettings.showWidgetName || false,
+          widgetName: currentSettings.widgetName || '',
         });
       }
 

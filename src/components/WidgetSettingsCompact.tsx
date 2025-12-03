@@ -2,17 +2,7 @@ import { useState, useEffect } from 'react';
 import { FiSave, FiRefreshCw, FiMap, FiList, FiExternalLink } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { initializeWixClient, updateWidgetConfig, isWixEnvironment, getDashboardUrl, getInstanceToken, getCompId } from '../wix-integration';
-import { widgetConfigService } from '../services/api';
-
-interface WidgetConfig {
-  defaultView: 'map' | 'list';
-  showHeader: boolean;
-  headerTitle: string;
-  mapZoomLevel: number;
-  primaryColor: string;
-  showWidgetName: boolean;
-  widgetName: string;
-}
+import { widgetConfigService, WidgetConfig } from '../services/api';
 
 const colorOptions = [
   { value: '#3B82F6', label: 'Blue', class: 'bg-blue-500' },

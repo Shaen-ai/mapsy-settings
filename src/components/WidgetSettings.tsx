@@ -1,15 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FiSave, FiEye, FiEyeOff, FiMap, FiList } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { widgetConfigService } from '../services/api';
-
-interface WidgetConfig {
-  defaultView: 'map' | 'list';
-  showHeader: boolean;
-  headerTitle: string;
-  mapZoomLevel: number;
-  primaryColor: string;
-}
+import { widgetConfigService, WidgetConfig } from '../services/api';
 
 interface WidgetSettingsProps {
   onClose?: () => void;
@@ -22,6 +14,8 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
     headerTitle: 'Our Locations',
     mapZoomLevel: 12,
     primaryColor: '#3B82F6',
+    showWidgetName: false,
+    widgetName: '',
   });
 
   const [loading, setLoading] = useState(false);

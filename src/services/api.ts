@@ -1,82 +1,99 @@
-import axios from 'axios';
 import { Location } from '../types/location';
-import { getInstanceToken, getCompId } from '../wix-integration';
+import { fetchWithAuth, getCompId } from '../wix-integration';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://mapsy-api.nextechspires.com/api';
 
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+/**
+ * Make an authenticated API request using Wix fetchWithAuth
+ */
+async function apiRequest<T>(
+  endpoint: string,
+  options?: RequestInit
+): Promise<T> {
+  const url = `${API_URL}${endpoint}`;
+  const response = await fetchWithAuth(url, options);
 
-// Add request interceptor to include Wix instance token
-api.interceptors.request.use(
-  (config) => {
-    const instanceToken = getInstanceToken();
-    const compId = getCompId();
-
-    if (instanceToken) {
-      // Add Authorization header with Bearer token
-      config.headers.Authorization = `Bearer ${instanceToken}`;
-      console.log('[API] Added Wix instance token to request');
-    }
-
-    if (compId) {
-      // Add compId as a custom header
-      config.headers['X-Wix-Comp-Id'] = compId;
-    }
-
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API Error (${response.status}): ${errorText}`);
   }
-);
+
+  return response.json();
+}
+
+/**
+ * Make a FormData request (for file uploads)
+ * Note: fetchWithAuth handles auth, but we need special handling for FormData
+ */
+async function apiFormDataRequest<T>(
+  endpoint: string,
+  formData: FormData,
+  method: 'POST' | 'PUT' = 'POST'
+): Promise<T> {
+  const url = `${API_URL}${endpoint}`;
+  const compId = getCompId();
+
+  // For FormData, we let the browser set Content-Type (with boundary)
+  const headers: Record<string, string> = {};
+  if (compId) {
+    headers['X-Wix-Comp-Id'] = compId;
+  }
+
+  const response = await fetchWithAuth(url, {
+    method,
+    body: formData,
+    headers,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API Error (${response.status}): ${errorText}`);
+  }
+
+  return response.json();
+}
 
 export const locationService = {
   getAll: async (): Promise<Location[]> => {
-    const response = await api.get('/locations');
-    return response.data;
+    return apiRequest<Location[]>('/locations', { method: 'GET' });
   },
 
   getOne: async (id: string | number): Promise<Location> => {
-    const response = await api.get(`/locations/${id}`);
-    return response.data;
+    return apiRequest<Location>(`/locations/${id}`, { method: 'GET' });
   },
 
-  create: async (location: FormData): Promise<Location> => {
-    const response = await api.post('/locations', location, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+  create: async (formData: FormData): Promise<Location> => {
+    return apiFormDataRequest<Location>('/locations', formData, 'POST');
   },
 
-  update: async (id: string | number, location: FormData): Promise<Location> => {
-    const response = await api.post(`/locations/${id}`, location, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+  update: async (id: string | number, formData: FormData): Promise<Location> => {
+    return apiFormDataRequest<Location>(`/locations/${id}`, formData, 'POST');
   },
 
   delete: async (id: string | number): Promise<void> => {
-    await api.delete(`/locations/${id}`);
+    await apiRequest<void>(`/locations/${id}`, { method: 'DELETE' });
   },
 };
 
+export interface WidgetConfig {
+  defaultView: 'map' | 'list';
+  showHeader: boolean;
+  headerTitle: string;
+  mapZoomLevel: number;
+  primaryColor: string;
+  showWidgetName: boolean;
+  widgetName: string;
+}
+
 export const widgetConfigService = {
-  getConfig: async () => {
-    const response = await api.get('/widget-config');
-    return response.data;
+  getConfig: async (): Promise<WidgetConfig> => {
+    return apiRequest<WidgetConfig>('/widget-config', { method: 'GET' });
   },
 
-  updateConfig: async (config: Record<string, any>) => {
-    const response = await api.put('/widget-config', config);
-    return response.data;
+  updateConfig: async (config: WidgetConfig): Promise<WidgetConfig> => {
+    return apiRequest<WidgetConfig>('/widget-config', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    });
   },
 };
