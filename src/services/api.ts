@@ -97,3 +97,16 @@ export const widgetConfigService = {
     });
   },
 };
+
+export interface AuthInfo {
+  instanceId: string | null;
+  compId: string | null;
+  instanceToken: string | null;
+  isAuthenticated: boolean;
+}
+
+export const authService = {
+  getAuthInfo: async (): Promise<AuthInfo> => {
+    return apiRequest<AuthInfo>('/auth-info', { method: 'GET' });
+  },
+};

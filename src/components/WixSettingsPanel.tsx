@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { FiSave, FiRefreshCw, FiMap, FiList, FiExternalLink } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { widgetConfigService, WidgetConfig } from '../services/api';
+import { widgetConfigService, authService, WidgetConfig } from '../services/api';
+import { getCompId } from '../wix-integration';
 
 // Declare Wix SDK types
 declare global {
@@ -31,6 +32,7 @@ function WixSettingsPanel() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [wixReady, setWixReady] = useState(false);
+  const [dashboardUrl, setDashboardUrl] = useState('https://mapsy-dashboard.nextechspires.com/');
 
   useEffect(() => {
     // Initialize Wix SDK
@@ -62,7 +64,39 @@ function WixSettingsPanel() {
       console.log('Running outside Wix environment - using default settings');
       fetchConfig();
     }
+
+    // Fetch auth info and build dashboard URL
+    fetchAuthInfo();
   }, []);
+
+  const fetchAuthInfo = async () => {
+    try {
+      console.log('[Settings] Fetching auth info...');
+      const authInfo = await authService.getAuthInfo();
+      console.log('[Settings] Auth info received:', authInfo);
+
+      // Build dashboard URL with instance token and compId
+      const baseUrl = new URL('https://mapsy-dashboard.nextechspires.com/');
+
+      if (authInfo.instanceToken) {
+        baseUrl.searchParams.set('instance', authInfo.instanceToken);
+        console.log('[Settings] Added instance token to dashboard URL');
+      }
+
+      // Use compId from auth info or from wix-integration
+      const compId = authInfo.compId || getCompId();
+      if (compId) {
+        baseUrl.searchParams.set('compId', compId);
+        console.log('[Settings] Added compId to dashboard URL:', compId);
+      }
+
+      setDashboardUrl(baseUrl.toString());
+      console.log('[Settings] Dashboard URL set:', baseUrl.toString());
+    } catch (error) {
+      console.error('[Settings] Error fetching auth info:', error);
+      // Keep default URL if auth info fetch fails
+    }
+  };
 
   const onSettingsUpdate = (update: any) => {
     console.log('Settings updated from Wix:', update);
@@ -146,7 +180,7 @@ function WixSettingsPanel() {
           <span className="text-xs text-green-600">✓ Wix Connected</span>
         )}
         <a
-          href="https://mapsy-dashboard.nextechspires.com/"
+          href={dashboardUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center px-2 py-1 text-xs bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:from-blue-700 hover:to-purple-700 transition-all"
