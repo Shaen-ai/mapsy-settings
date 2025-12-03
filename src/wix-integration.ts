@@ -11,6 +11,19 @@ let wixClient: any = null;
 let instanceToken: string | null = null;
 let compId: string | null = null;
 
+/**
+ * Generate a unique compId in the format comp-xxxxxxxx
+ * Uses random alphanumeric characters
+ */
+function generateCompId(): string {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let result = 'comp-';
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
 // Try to import Wix modules
 try {
   // In Wix environment, these modules are available
@@ -73,6 +86,20 @@ export async function initializeWixClient() {
       if (urlCompId) {
         compId = urlCompId;
         console.log('[WixIntegration] Component ID retrieved from URL:', compId);
+      }
+    }
+
+    // If still no compId, generate a new one and set it on the widget
+    if (!compId && wixClient && wixClient.widget) {
+      compId = generateCompId();
+      console.log('[WixIntegration] Generated new compId:', compId);
+
+      // Set the compId on the widget using setProp
+      try {
+        wixClient.widget.setProp('compId', compId);
+        console.log('[WixIntegration] Set compId prop on widget:', compId);
+      } catch (err) {
+        console.error('[WixIntegration] Failed to set compId prop:', err);
       }
     }
 

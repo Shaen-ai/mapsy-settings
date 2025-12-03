@@ -10,6 +10,8 @@ interface WidgetConfig {
   headerTitle: string;
   mapZoomLevel: number;
   primaryColor: string;
+  showWidgetName: boolean;
+  widgetName: string;
 }
 
 const colorOptions = [
@@ -27,6 +29,8 @@ function WidgetSettingsCompact() {
     headerTitle: 'Our Locations',
     mapZoomLevel: 12,
     primaryColor: '#3B82F6',
+    showWidgetName: false,
+    widgetName: '',
   });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -122,6 +126,43 @@ function WidgetSettingsCompact() {
 
       {/* Settings Form - Scrollable */}
       <div className="flex-1 overflow-y-auto pr-1 space-y-3" style={{ maxHeight: '310px' }}>
+        {/* Widget Name */}
+        <div className="bg-white/70 rounded-lg p-2.5 border border-gray-100">
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            Widget Name
+          </label>
+          <input
+            type="text"
+            value={config.widgetName}
+            onChange={(e) => updateConfigWithBroadcast({ ...config, widgetName: e.target.value })}
+            className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white/80"
+            placeholder="e.g., Homepage Map, Store Locator"
+          />
+          <p className="text-[10px] text-gray-400 mt-1">Used to identify this widget in the dashboard</p>
+        </div>
+
+        {/* Show Widget Name on Widget */}
+        <div className="bg-white/70 rounded-lg p-2.5 border border-gray-100">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-gray-600">
+              Display Widget Name
+            </label>
+            <button
+              onClick={() => updateConfigWithBroadcast({ ...config, showWidgetName: !config.showWidgetName })}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all ${
+                config.showWidgetName ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                  config.showWidgetName ? 'translate-x-5' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-400 mt-1">Show the widget name above the map/list</p>
+        </div>
+
         {/* Default View */}
         <div className="bg-white/70 rounded-lg p-2.5 border border-gray-100">
           <label className="block text-xs font-semibold text-gray-600 mb-1.5">
