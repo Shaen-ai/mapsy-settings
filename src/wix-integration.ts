@@ -3,8 +3,10 @@
  * This module handles communication between the settings panel and widget using Wix SDK
  */
 
-import { widget } from '@wix/editor';
+import { createClient } from '@wix/sdk';
+import { widget, editor } from '@wix/editor';
 
+let wixClient: ReturnType<typeof createClient> | null = null;
 let instanceToken: string | null = null;
 let compId: string | null = null;
 let isInitialized = false;
@@ -23,22 +25,29 @@ function generateCompId(): string {
 }
 
 /**
- * Initialize the Wix integration
+ * Initialize the Wix integration with proper context
  */
 export async function initializeWixClient(): Promise<boolean> {
-  if (isInitialized) {
+  if (isInitialized && wixClient) {
     console.log('[WixIntegration] Already initialized');
     return true;
   }
 
   try {
-    console.log('[WixIntegration] Initializing...');
-    console.log('[WixIntegration] widget module available:', !!widget);
+    console.log('[WixIntegration] Initializing with Wix SDK...');
+
+    // Create the Wix client with editor host - this establishes the context
+    wixClient = createClient({
+      host: editor.host(),
+      modules: { widget },
+    });
+
+    console.log('[WixIntegration] Wix client created successfully');
 
     // Try to get compId from widget props
-    if (widget && widget.getProp) {
+    if (wixClient.widget && wixClient.widget.getProp) {
       try {
-        const existingCompId = await widget.getProp('compId');
+        const existingCompId = await wixClient.widget.getProp('compId');
         if (existingCompId) {
           compId = existingCompId as string;
           console.log('[WixIntegration] Found existing compId from widget:', compId);
@@ -59,25 +68,50 @@ export async function initializeWixClient(): Promise<boolean> {
     }
 
     // If still no compId, generate a new one and set it on the widget
-    if (!compId && widget && widget.setProp) {
+    if (!compId) {
       compId = generateCompId();
       console.log('[WixIntegration] Generated new compId:', compId);
 
       // Set the compId on the widget using setProp
+      if (wixClient.widget && wixClient.widget.setProp) {
+        try {
+          await wixClient.widget.setProp('compId', compId);
+          console.log('[WixIntegration] Set compId prop on widget:', compId);
+        } catch (err) {
+          console.error('[WixIntegration] Failed to set compId prop:', err);
+        }
+      }
+    }
+
+    // Try to get instance token from auth
+    if (wixClient.auth) {
       try {
-        await widget.setProp('compId', compId);
-        console.log('[WixIntegration] Set compId prop on widget:', compId);
+        // For editor extensions, we can get the app instance
+        const tokens = await wixClient.auth.getTokens();
+        if (tokens && tokens.accessToken) {
+          instanceToken = tokens.accessToken.value;
+          console.log('[WixIntegration] Got access token from auth');
+        }
       } catch (err) {
-        console.error('[WixIntegration] Failed to set compId prop:', err);
+        console.log('[WixIntegration] Could not get tokens from auth:', err);
       }
     }
 
     isInitialized = true;
     console.log('[WixIntegration] Initialization complete');
+    console.log('[WixIntegration] Final state - Instance token:', instanceToken ? 'Available' : 'Not available');
     console.log('[WixIntegration] Final state - Comp ID:', compId || 'Not available');
     return true;
   } catch (error) {
     console.error('[WixIntegration] Failed to initialize:', error);
+
+    // Fallback: still generate compId even if Wix SDK fails
+    if (!compId) {
+      compId = generateCompId();
+      console.log('[WixIntegration] Fallback - Generated compId:', compId);
+    }
+
+    isInitialized = true;
     return false;
   }
 }
@@ -87,15 +121,15 @@ export async function initializeWixClient(): Promise<boolean> {
  * This is equivalent to updating an attribute on the custom element
  */
 export async function updateWidgetProperty(property: string, value: any): Promise<boolean> {
-  if (!widget || !widget.setProp) {
-    console.warn('[WixIntegration] Widget SDK not available');
+  if (!wixClient || !wixClient.widget || !wixClient.widget.setProp) {
+    console.warn('[WixIntegration] Wix client not available for setProp');
     return false;
   }
 
   try {
     // Use Wix SDK to update the property
     // This will trigger attributeChangedCallback on the custom element
-    await widget.setProp(property, String(value));
+    await wixClient.widget.setProp(property, String(value));
     console.log(`[WixIntegration] Set property '${property}' to:`, value);
     return true;
   } catch (error) {
@@ -128,7 +162,14 @@ export async function updateWidgetConfig(config: Record<string, any>): Promise<b
  * Check if running in Wix environment
  */
 export function isWixEnvironment(): boolean {
-  return !!(widget && widget.setProp);
+  return !!(wixClient && wixClient.widget);
+}
+
+/**
+ * Get the Wix client instance
+ */
+export function getWixClient() {
+  return wixClient;
 }
 
 /**
