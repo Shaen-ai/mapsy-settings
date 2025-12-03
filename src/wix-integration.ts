@@ -92,9 +92,20 @@ export async function initializeWixClient(): Promise<boolean> {
       }
     }
 
+    // Try to get the instance token from URL (Wix passes it as 'instance' param)
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlInstance = urlParams.get('instance');
+      if (urlInstance) {
+        instanceToken = urlInstance;
+        console.log('[WixIntegration] Found instance token in URL');
+      }
+    }
+
     isInitialized = true;
     console.log('[WixIntegration] Initialization complete');
     console.log('[WixIntegration] Final state - Comp ID:', compId || 'Not available');
+    console.log('[WixIntegration] Final state - Instance token:', instanceToken ? 'Available' : 'Not available');
     console.log('[WixIntegration] fetchWithAuth ready for authenticated API calls');
     return true;
   } catch (error) {
@@ -104,6 +115,16 @@ export async function initializeWixClient(): Promise<boolean> {
     if (!compId) {
       compId = generateCompId();
       console.log('[WixIntegration] Fallback - Generated compId:', compId);
+    }
+
+    // Fallback: try to get instance token from URL
+    if (!instanceToken && typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlInstance = urlParams.get('instance');
+      if (urlInstance) {
+        instanceToken = urlInstance;
+        console.log('[WixIntegration] Fallback - Found instance token in URL');
+      }
     }
 
     isInitialized = true;
@@ -148,9 +169,17 @@ export async function fetchWithAuth(url: string, options?: RequestInit): Promise
     }
   }
 
-  // Fallback to regular fetch
-  console.log('[FetchWithAuth] Using regular fetch (no auth)...');
-  const response = await fetch(url, fetchOptions);
+  // Fallback to regular fetch with manual token
+  console.log('[FetchWithAuth] Using regular fetch...');
+  if (instanceToken) {
+    headers['Authorization'] = `Bearer ${instanceToken}`;
+    console.log('[FetchWithAuth] Added manual Authorization header');
+  }
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
   console.log('[FetchWithAuth] Response status:', response.status);
   return response;
 }
