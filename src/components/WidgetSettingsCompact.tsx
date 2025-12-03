@@ -62,7 +62,7 @@ function WidgetSettingsCompact() {
   };
 
   // Broadcast config changes for real-time updates
-  const broadcastConfigChange = (updatedConfig: WidgetConfig) => {
+  const broadcastConfigChange = async (updatedConfig: WidgetConfig) => {
     console.log('[Settings] Broadcasting config change:', updatedConfig);
 
     // Store in localStorage for persistence
@@ -70,7 +70,7 @@ function WidgetSettingsCompact() {
     console.log('[Settings] Saved to localStorage:', localStorage.getItem('mapsy-widget-config'));
 
     // Use Wix SDK to update widget properties
-    const success = updateWidgetConfig(updatedConfig);
+    const success = await updateWidgetConfig(updatedConfig);
     if (success) {
       console.log('[Settings] Successfully updated widget via Wix SDK');
     } else {

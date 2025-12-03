@@ -3,13 +3,11 @@
  * This module handles communication between the settings panel and widget using Wix SDK
  */
 
-// Import Wix SDK modules (these will only work in Wix environment)
-let editor: any = null;
-let widget: any = null;
-let createClient: any = null;
-let wixClient: any = null;
+import { widget } from '@wix/editor';
+
 let instanceToken: string | null = null;
 let compId: string | null = null;
+let isInitialized = false;
 
 /**
  * Generate a unique compId in the format comp-xxxxxxxx
@@ -24,59 +22,30 @@ function generateCompId(): string {
   return result;
 }
 
-// Try to import Wix modules
-try {
-  // In Wix environment, these modules are available
-  const wixEditor = require('@wix/editor');
-  editor = wixEditor.editor;
-  widget = wixEditor.widget;
-
-  const wixSdk = require('@wix/sdk');
-  createClient = wixSdk.createClient;
-
-  console.log('[WixIntegration] Wix SDK modules loaded');
-} catch (e) {
-  console.log('[WixIntegration] Running outside Wix environment');
-}
-
 /**
- * Initialize the Wix client
+ * Initialize the Wix integration
  */
-export async function initializeWixClient() {
-  if (!createClient) {
-    console.log('[WixIntegration] Wix SDK not available');
-    return null;
+export async function initializeWixClient(): Promise<boolean> {
+  if (isInitialized) {
+    console.log('[WixIntegration] Already initialized');
+    return true;
   }
 
   try {
-    // Initialize Wix client for settings panel
-    if (editor && widget) {
-      wixClient = createClient({
-        host: editor.host(),
-        modules: { widget },
-      });
+    console.log('[WixIntegration] Initializing...');
+    console.log('[WixIntegration] widget module available:', !!widget);
 
-      // Try to get compId from widget
+    // Try to get compId from widget props
+    if (widget && widget.getProp) {
       try {
-        const widgetCompId = await widget.getCompId?.();
-        if (widgetCompId) {
-          compId = widgetCompId;
-          console.log('[WixIntegration] Component ID retrieved from widget:', compId);
+        const existingCompId = await widget.getProp('compId');
+        if (existingCompId) {
+          compId = existingCompId as string;
+          console.log('[WixIntegration] Found existing compId from widget:', compId);
         }
       } catch (err) {
-        console.log('[WixIntegration] Could not get compId from widget:', err);
+        console.log('[WixIntegration] Could not get compId from widget props:', err);
       }
-    } else {
-      // Fallback for simpler client initialization
-      wixClient = await createClient({
-        auth: { anonymous: true },
-      });
-    }
-
-    // Get instance token for API authentication
-    if (wixClient && wixClient.auth && wixClient.auth.getInstanceToken) {
-      instanceToken = wixClient.auth.getInstanceToken();
-      console.log('[WixIntegration] Instance token retrieved');
     }
 
     // Try to get compId from URL if not already set
@@ -85,31 +54,31 @@ export async function initializeWixClient() {
       const urlCompId = urlParams.get('compId');
       if (urlCompId) {
         compId = urlCompId;
-        console.log('[WixIntegration] Component ID retrieved from URL:', compId);
+        console.log('[WixIntegration] Found compId in URL:', compId);
       }
     }
 
     // If still no compId, generate a new one and set it on the widget
-    if (!compId && wixClient && wixClient.widget) {
+    if (!compId && widget && widget.setProp) {
       compId = generateCompId();
       console.log('[WixIntegration] Generated new compId:', compId);
 
       // Set the compId on the widget using setProp
       try {
-        wixClient.widget.setProp('compId', compId);
+        await widget.setProp('compId', compId);
         console.log('[WixIntegration] Set compId prop on widget:', compId);
       } catch (err) {
         console.error('[WixIntegration] Failed to set compId prop:', err);
       }
     }
 
-    console.log('[WixIntegration] Wix client initialized successfully');
-    console.log('[WixIntegration] Final state - Instance token:', instanceToken ? 'Available' : 'Not available');
-    console.log('[WixIntegration] Final state - Comp ID:', compId ? compId : 'Not available');
-    return wixClient;
+    isInitialized = true;
+    console.log('[WixIntegration] Initialization complete');
+    console.log('[WixIntegration] Final state - Comp ID:', compId || 'Not available');
+    return true;
   } catch (error) {
-    console.error('[WixIntegration] Failed to initialize Wix client:', error);
-    return null;
+    console.error('[WixIntegration] Failed to initialize:', error);
+    return false;
   }
 }
 
@@ -117,16 +86,16 @@ export async function initializeWixClient() {
  * Update a widget property using Wix SDK
  * This is equivalent to updating an attribute on the custom element
  */
-export function updateWidgetProperty(property: string, value: any) {
-  if (!wixClient || !wixClient.widget) {
-    console.warn('[WixIntegration] Wix client not available');
+export async function updateWidgetProperty(property: string, value: any): Promise<boolean> {
+  if (!widget || !widget.setProp) {
+    console.warn('[WixIntegration] Widget SDK not available');
     return false;
   }
 
   try {
     // Use Wix SDK to update the property
     // This will trigger attributeChangedCallback on the custom element
-    wixClient.widget.setProp(property, value);
+    await widget.setProp(property, String(value));
     console.log(`[WixIntegration] Set property '${property}' to:`, value);
     return true;
   } catch (error) {
@@ -138,47 +107,49 @@ export function updateWidgetProperty(property: string, value: any) {
 /**
  * Update multiple widget properties at once
  */
-export function updateWidgetConfig(config: Record<string, any>) {
+export async function updateWidgetConfig(config: Record<string, any>): Promise<boolean> {
   let success = true;
 
   // Update each property individually
   for (const [key, value] of Object.entries(config)) {
-    if (!updateWidgetProperty(key, value)) {
+    const result = await updateWidgetProperty(key, value);
+    if (!result) {
       success = false;
     }
   }
 
   // Also send the full config as a JSON string
-  updateWidgetProperty('config', JSON.stringify(config));
+  await updateWidgetProperty('config', JSON.stringify(config));
 
   return success;
 }
 
 /**
- * Get the current Wix client instance
- */
-export function getWixClient() {
-  return wixClient;
-}
-
-/**
  * Check if running in Wix environment
  */
-export function isWixEnvironment() {
-  return wixClient !== null;
+export function isWixEnvironment(): boolean {
+  return !!(widget && widget.setProp);
 }
 
 /**
  * Get the instance token for API authentication
  */
-export function getInstanceToken() {
+export function getInstanceToken(): string | null {
   return instanceToken;
 }
 
 /**
- * Set the component ID (if needed for tracking)
+ * Set the instance token
  */
-export function setCompId(id: string) {
+export function setInstanceToken(token: string): void {
+  instanceToken = token;
+  console.log('[WixIntegration] Instance token set');
+}
+
+/**
+ * Set the component ID
+ */
+export function setCompId(id: string): void {
   compId = id;
   console.log('[WixIntegration] Component ID set:', id);
 }
@@ -186,7 +157,7 @@ export function setCompId(id: string) {
 /**
  * Get the component ID
  */
-export function getCompId() {
+export function getCompId(): string | null {
   return compId;
 }
 
