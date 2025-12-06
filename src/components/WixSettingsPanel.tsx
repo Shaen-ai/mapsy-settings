@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FiSave, FiRefreshCw, FiMap, FiList, FiExternalLink } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { widgetConfigService, authService, WidgetConfig } from '../services/api';
+import { widgetConfigService, WidgetConfig, AuthInfo } from '../services/api';
 import { getCompId } from '../wix-integration';
 
 // Declare Wix SDK types
@@ -35,16 +35,7 @@ function WixSettingsPanel() {
   const [dashboardUrl, setDashboardUrl] = useState('https://mapsy-dashboard.nextechspires.com/');
 
   useEffect(() => {
-    // Initialize Wix SDK
     if (window.Wix) {
-      window.Wix.addEventListener(window.Wix.Events.SETTINGS_UPDATED, onSettingsUpdate);
-
-      // Get initial widget properties
-      window.Wix.Settings.getSiteColors((siteColors: any) => {
-        console.log('Site colors:', siteColors);
-      });
-
-      // Get current widget settings
       const currentSettings = window.Wix.Settings.getStyleParams();
       if (currentSettings) {
         setConfig({
@@ -57,49 +48,25 @@ function WixSettingsPanel() {
           widgetName: currentSettings.widgetName || '',
         });
       }
-
       setWixReady(true);
-      console.log('Wix SDK initialized');
     } else {
-      console.log('Running outside Wix environment - using default settings');
       fetchConfig();
     }
-
-    // Fetch auth info and build dashboard URL
-    fetchAuthInfo();
   }, []);
 
-  const fetchAuthInfo = async () => {
-    try {
-      console.log('[Settings] Fetching auth info...');
-      const authInfo = await authService.getAuthInfo();
-      console.log('[Settings] Auth info received:', authInfo);
+  const buildDashboardUrl = (authInfo?: AuthInfo) => {
+    const baseUrl = new URL('https://mapsy-dashboard.nextechspires.com/');
 
-      // Build dashboard URL with instance token and compId
-      const baseUrl = new URL('https://mapsy-dashboard.nextechspires.com/');
-
-      if (authInfo.instanceToken) {
-        baseUrl.searchParams.set('instance', authInfo.instanceToken);
-        console.log('[Settings] Added instance token to dashboard URL');
-      }
-
-      // Use compId from auth info or from wix-integration
-      const compId = authInfo.compId || getCompId();
-      if (compId) {
-        baseUrl.searchParams.set('compId', compId);
-        console.log('[Settings] Added compId to dashboard URL:', compId);
-      }
-
-      setDashboardUrl(baseUrl.toString());
-      console.log('[Settings] Dashboard URL set:', baseUrl.toString());
-    } catch (error) {
-      console.error('[Settings] Error fetching auth info:', error);
-      // Keep default URL if auth info fetch fails
+    if (authInfo?.instanceToken) {
+      baseUrl.searchParams.set('instance', authInfo.instanceToken);
     }
-  };
 
-  const onSettingsUpdate = (update: any) => {
-    console.log('Settings updated from Wix:', update);
+    const compId = authInfo?.compId || getCompId();
+    if (compId) {
+      baseUrl.searchParams.set('compId', compId);
+    }
+
+    setDashboardUrl(baseUrl.toString());
   };
 
   const fetchConfig = async () => {
@@ -107,6 +74,8 @@ function WixSettingsPanel() {
       setLoading(true);
       const data = await widgetConfigService.getConfig();
       setConfig(data);
+      // Build dashboard URL from auth info included in response
+      buildDashboardUrl(data.auth);
     } catch (error) {
       console.error('Error fetching config:', error);
     } finally {
@@ -114,25 +83,12 @@ function WixSettingsPanel() {
     }
   };
 
-  // Update widget properties using Wix Widget API
   const updateWidgetProperty = (property: string, value: any) => {
     if (window.Wix && window.Wix.Settings) {
-      // Use Wix Widget API to update the widget
-      window.Wix.Settings.triggerSettingsUpdatedEvent({
-        [property]: value
-      });
-
-      // Also use setProp for custom element attributes
+      window.Wix.Settings.triggerSettingsUpdatedEvent({ [property]: value });
       try {
-        // This updates the widget's custom element attributes
-        window.parent.postMessage({
-          type: 'wix-widget-update',
-          property,
-          value
-        }, '*');
-      } catch (e) {
-        console.log('Could not post message:', e);
-      }
+        window.parent.postMessage({ type: 'wix-widget-update', property, value }, '*');
+      } catch {}
     }
   };
 

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { FiSave, FiRefreshCw, FiMap, FiList, FiExternalLink } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { initializeWixClient, updateWidgetConfig, isWixEnvironment, getInstanceToken, getCompId, setInstanceToken } from '../wix-integration';
-import { widgetConfigService, authService, WidgetConfig } from '../services/api';
+import { initializeWixClient, updateWidgetConfig, getCompId, setInstanceToken } from '../wix-integration';
+import { widgetConfigService, WidgetConfig, AuthInfo } from '../services/api';
 
 const colorOptions = [
   { value: '#3B82F6', label: 'Blue', class: 'bg-blue-500' },
@@ -27,54 +27,27 @@ function WidgetSettingsCompact() {
   const [dashboardUrl, setDashboardUrl] = useState('https://mapsy-dashboard.nextechspires.com/');
 
   useEffect(() => {
-    // Initialize Wix client on mount (async)
     const init = async () => {
       await initializeWixClient();
-      console.log('[Settings] Wix environment:', isWixEnvironment() ? 'Yes' : 'No');
-      console.log('[Settings] Instance token:', getInstanceToken() ? 'Available' : 'Not available');
-      console.log('[Settings] Comp ID:', getCompId() ? getCompId() : 'Not available');
-
-      // Fetch auth info to get instance token for dashboard URL
-      await fetchAuthInfo();
+      await fetchConfig();
     };
-
     init();
-    fetchConfig();
   }, []);
 
-  const fetchAuthInfo = async () => {
-    try {
-      console.log('[Settings] Fetching auth info...');
-      const authInfo = await authService.getAuthInfo();
-      console.log('[Settings] Auth info received:', authInfo);
+  const buildDashboardUrl = (authInfo?: AuthInfo) => {
+    const baseUrl = new URL('https://mapsy-dashboard.nextechspires.com/');
 
-      // Store instance token for later use
-      if (authInfo.instanceToken) {
-        setInstanceToken(authInfo.instanceToken);
-        console.log('[Settings] Instance token stored');
-      }
-
-      // Build dashboard URL with instance token and compId
-      const baseUrl = new URL('https://mapsy-dashboard.nextechspires.com/');
-
-      if (authInfo.instanceToken) {
-        baseUrl.searchParams.set('instance', authInfo.instanceToken);
-        console.log('[Settings] Added instance token to dashboard URL');
-      }
-
-      // Use compId from auth info or from wix-integration
-      const compId = authInfo.compId || getCompId();
-      if (compId) {
-        baseUrl.searchParams.set('compId', compId);
-        console.log('[Settings] Added compId to dashboard URL:', compId);
-      }
-
-      setDashboardUrl(baseUrl.toString());
-      console.log('[Settings] Dashboard URL set:', baseUrl.toString());
-    } catch (error) {
-      console.error('[Settings] Error fetching auth info:', error);
-      // Keep default URL if auth info fetch fails
+    if (authInfo?.instanceToken) {
+      baseUrl.searchParams.set('instance', authInfo.instanceToken);
+      setInstanceToken(authInfo.instanceToken);
     }
+
+    const compId = authInfo?.compId || getCompId();
+    if (compId) {
+      baseUrl.searchParams.set('compId', compId);
+    }
+
+    setDashboardUrl(baseUrl.toString());
   };
 
   const fetchConfig = async () => {
@@ -82,6 +55,8 @@ function WidgetSettingsCompact() {
       setLoading(true);
       const data = await widgetConfigService.getConfig();
       setConfig(data);
+      // Build dashboard URL from auth info included in response
+      buildDashboardUrl(data.auth);
     } catch (error) {
       console.error('Error fetching config:', error);
       toast.error('Failed to load settings');
@@ -90,26 +65,12 @@ function WidgetSettingsCompact() {
     }
   };
 
-  // Broadcast config changes for real-time updates
   const broadcastConfigChange = async (updatedConfig: WidgetConfig) => {
-    console.log('[Settings] Broadcasting config change:', updatedConfig);
-
-    // Store in localStorage for persistence
     localStorage.setItem('mapsy-widget-config', JSON.stringify(updatedConfig));
-    console.log('[Settings] Saved to localStorage:', localStorage.getItem('mapsy-widget-config'));
-
-    // Use Wix SDK to update widget properties
-    const success = await updateWidgetConfig(updatedConfig);
-    if (success) {
-      console.log('[Settings] Successfully updated widget via Wix SDK');
-    } else {
-      console.log('[Settings] Wix SDK not available');
-    }
+    await updateWidgetConfig(updatedConfig);
   };
 
-  // Update config and broadcast changes
   const updateConfigWithBroadcast = (newConfig: WidgetConfig) => {
-    console.log('[Settings] updateConfigWithBroadcast called with:', newConfig);
     setConfig(newConfig);
     broadcastConfigChange(newConfig);
   };
@@ -141,10 +102,7 @@ function WidgetSettingsCompact() {
       {/* Header with Dashboard Button */}
       <div className="mb-3 pb-2 border-b border-gray-100 flex items-center justify-end">
         <button
-          onClick={() => {
-            console.log('[Settings] Opening dashboard:', dashboardUrl);
-            window.open(dashboardUrl, '_blank');
-          }}
+          onClick={() => window.open(dashboardUrl, '_blank')}
           className="inline-flex items-center px-2 py-1 text-xs bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:from-blue-700 hover:to-purple-700 transition-all cursor-pointer"
         >
           <FiExternalLink className="mr-1 h-3 w-3" />

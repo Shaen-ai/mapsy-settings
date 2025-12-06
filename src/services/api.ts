@@ -75,6 +75,13 @@ export const locationService = {
   },
 };
 
+export interface AuthInfo {
+  instanceId: string | null;
+  compId: string | null;
+  instanceToken: string | null;
+  isAuthenticated: boolean;
+}
+
 export interface WidgetConfig {
   defaultView: 'map' | 'list';
   showHeader: boolean;
@@ -83,6 +90,7 @@ export interface WidgetConfig {
   primaryColor: string;
   showWidgetName: boolean;
   widgetName: string;
+  auth?: AuthInfo;
 }
 
 export const widgetConfigService = {
@@ -98,15 +106,3 @@ export const widgetConfigService = {
   },
 };
 
-export interface AuthInfo {
-  instanceId: string | null;
-  compId: string | null;
-  instanceToken: string | null;
-  isAuthenticated: boolean;
-}
-
-export const authService = {
-  getAuthInfo: async (): Promise<AuthInfo> => {
-    return apiRequest<AuthInfo>('/auth-info', { method: 'GET' });
-  },
-};
