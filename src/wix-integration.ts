@@ -11,6 +11,19 @@ let instanceToken: string | null = null;
 let compId: string | null = null;
 let isInitialized = false;
 
+// Extract URL params immediately on module load (before async Wix SDK init)
+if (typeof window !== 'undefined') {
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlInstance = urlParams.get('instance');
+  const urlCompId = urlParams.get('compId');
+  if (urlInstance) {
+    instanceToken = urlInstance;
+  }
+  if (urlCompId) {
+    compId = urlCompId;
+  }
+}
+
 function generateCompId(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
   let result = 'comp-';
@@ -107,16 +120,16 @@ export async function fetchWithAuth(url: string, options?: RequestInit): Promise
     headers,
   };
 
-  // Use Wix authenticated fetch if available
+  // Use Wix SDK fetchWithAuth for proper authentication (required for settings panel)
   if (wixClient && wixClient.fetchWithAuth) {
     try {
       return await wixClient.fetchWithAuth(url, fetchOptions);
     } catch {}
   }
 
-  // Fallback to regular fetch with manual token
+  // Fallback to regular fetch with manual token (if available from URL)
   if (instanceToken) {
-    headers['Authorization'] = `Bearer ${instanceToken}`;
+    headers['Authorization'] = instanceToken.startsWith('Bearer ') ? instanceToken : `Bearer ${instanceToken}`;
   }
 
   return fetch(url, { ...options, headers });
