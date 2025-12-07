@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { FiSave, FiRefreshCw, FiMap, FiList, FiExternalLink } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { widgetConfigService, WidgetConfig, AuthInfo } from '../services/api';
-import { getCompId } from '../wix-integration';
+import { getCompId, updateWidgetConfig } from '../wix-integration';
 
 // Declare Wix SDK types
 declare global {
@@ -83,22 +83,14 @@ function WixSettingsPanel() {
     }
   };
 
-  const updateWidgetProperty = (property: string, value: any) => {
-    if (window.Wix && window.Wix.Settings) {
-      window.Wix.Settings.triggerSettingsUpdatedEvent({ [property]: value });
-      try {
-        window.parent.postMessage({ type: 'wix-widget-update', property, value }, '*');
-      } catch {}
-    }
-  };
-
-  const updateConfig = (newConfig: WidgetConfig, changedProp?: string) => {
+  const updateConfig = async (newConfig: WidgetConfig, changedProp?: string) => {
     setConfig(newConfig);
 
-    // If running in Wix, update widget properties
-    if (window.Wix && changedProp) {
+    // Use Wix SDK widget.setProp() for live updates in editor
+    if (changedProp) {
       const propValue = newConfig[changedProp as keyof WidgetConfig];
-      updateWidgetProperty(changedProp, propValue);
+      // Update individual property for immediate feedback
+      await updateWidgetConfig({ [changedProp]: propValue });
     }
   };
 
@@ -106,12 +98,11 @@ function WixSettingsPanel() {
     try {
       setSaving(true);
       await widgetConfigService.updateConfig(config);
-      toast.success('Settings saved!');
 
-      // If in Wix, update all widget properties at once
-      if (window.Wix && window.Wix.Settings) {
-        window.Wix.Settings.triggerSettingsUpdatedEvent(config);
-      }
+      // Update all widget properties via Wix SDK for live sync
+      await updateWidgetConfig(config);
+
+      toast.success('Settings saved!');
     } catch (error) {
       console.error('Error saving config:', error);
       toast.error('Failed to save settings');
