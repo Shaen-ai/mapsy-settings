@@ -230,6 +230,41 @@ function WixSettingsPanel() {
           </div>
         </div>
 
+        {/* Widget Name */}
+        <div className="bg-white/70 rounded-lg p-2.5 border border-gray-100">
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            Widget Name
+          </label>
+          <input
+            type="text"
+            value={config.widgetName}
+            onChange={(e) => updateConfig({ ...config, widgetName: e.target.value }, 'widgetName')}
+            className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white/80"
+            placeholder="Enter widget name"
+          />
+        </div>
+
+        {/* Display Widget Name */}
+        <div className="bg-white/70 rounded-lg p-2.5 border border-gray-100">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-gray-600">
+              Display Widget Name
+            </label>
+            <button
+              onClick={() => updateConfig({ ...config, showWidgetName: !config.showWidgetName }, 'showWidgetName')}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all ${
+                config.showWidgetName ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-gray-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                  config.showWidgetName ? 'translate-x-5' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
         {/* Primary Color */}
         <div className="bg-white/70 rounded-lg p-2.5 border border-gray-100">
           <label className="block text-xs font-semibold text-gray-600 mb-1.5">
