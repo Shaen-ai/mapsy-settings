@@ -11,16 +11,12 @@ let instanceToken: string | null = null;
 let compId: string | null = null;
 let isInitialized = false;
 
-// Extract URL params immediately on module load (before async Wix SDK init)
+// Extract instance token from URL on module load
 if (typeof window !== 'undefined') {
   const urlParams = new URLSearchParams(window.location.search);
   const urlInstance = urlParams.get('instance');
-  const urlCompId = urlParams.get('compId');
   if (urlInstance) {
     instanceToken = urlInstance;
-  }
-  if (urlCompId) {
-    compId = urlCompId;
   }
 }
 
@@ -45,59 +41,43 @@ export async function initializeWixClient(): Promise<boolean> {
       modules: { widget },
     });
 
-    // Try to get compId from widget props
+    // Try to get compId from widget props (this is how settings gets the widget's compId)
     if (wixClient.widget && wixClient.widget.getProp) {
       try {
         const existingCompId = await wixClient.widget.getProp('compId');
         if (existingCompId) {
           compId = existingCompId as string;
+          console.log('[Settings] Got compId from widget props:', compId);
         }
-      } catch {}
-    }
-
-    // Try to get compId from URL if not already set
-    if (!compId && typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlCompId = urlParams.get('compId');
-      if (urlCompId) {
-        compId = urlCompId;
+      } catch (e) {
+        console.log('[Settings] Could not get compId from widget props:', e);
       }
     }
 
-    // If still no compId, generate a new one and set it on the widget
+    // If no compId exists, generate one and save it to widget props
     if (!compId) {
       compId = generateCompId();
+      console.log('[Settings] Generated new compId:', compId);
+
       if (wixClient.widget && wixClient.widget.setProp) {
         try {
           await wixClient.widget.setProp('compId', compId);
-        } catch {}
-      }
-    }
-
-    // Try to get the instance token from URL
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlInstance = urlParams.get('instance');
-      if (urlInstance) {
-        instanceToken = urlInstance;
+          console.log('[Settings] Saved compId to widget props');
+        } catch (e) {
+          console.log('[Settings] Could not save compId to widget props:', e);
+        }
       }
     }
 
     isInitialized = true;
     return true;
   } catch (error) {
-    // Fallback: still generate compId even if Wix SDK fails
+    console.error('[Settings] Wix SDK init failed:', error);
+
+    // Fallback: generate compId even if Wix SDK fails
     if (!compId) {
       compId = generateCompId();
-    }
-
-    // Fallback: try to get instance token from URL
-    if (!instanceToken && typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlInstance = urlParams.get('instance');
-      if (urlInstance) {
-        instanceToken = urlInstance;
-      }
+      console.log('[Settings] Fallback: Generated compId:', compId);
     }
 
     isInitialized = true;
@@ -120,14 +100,16 @@ export async function fetchWithAuth(url: string, options?: RequestInit): Promise
     headers,
   };
 
-  // Use Wix SDK fetchWithAuth for proper authentication (required for settings panel)
+  // Use Wix SDK fetchWithAuth for proper authentication
   if (wixClient && wixClient.fetchWithAuth) {
     try {
       return await wixClient.fetchWithAuth(url, fetchOptions);
-    } catch {}
+    } catch (e) {
+      console.log('[Settings] wixClient.fetchWithAuth failed, falling back:', e);
+    }
   }
 
-  // Fallback to regular fetch with manual token (if available from URL)
+  // Fallback to regular fetch with manual token
   if (instanceToken) {
     headers['Authorization'] = instanceToken.startsWith('Bearer ') ? instanceToken : `Bearer ${instanceToken}`;
   }
