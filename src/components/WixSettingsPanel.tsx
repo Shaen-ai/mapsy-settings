@@ -35,22 +35,12 @@ function WixSettingsPanel() {
   const [dashboardUrl, setDashboardUrl] = useState('https://mapsy-dashboard.nextechspires.com/');
 
   useEffect(() => {
+    // Always fetch config from API to get last saved settings
+    fetchConfig();
+
+    // Check if Wix SDK is available for live preview features
     if (window.Wix) {
-      const currentSettings = window.Wix.Settings.getStyleParams();
-      if (currentSettings) {
-        setConfig({
-          defaultView: currentSettings.defaultView || 'map',
-          showHeader: currentSettings.showHeader || false,
-          headerTitle: currentSettings.headerTitle || 'Our Locations',
-          mapZoomLevel: currentSettings.mapZoomLevel || 12,
-          primaryColor: currentSettings.primaryColor || '#3B82F6',
-          showWidgetName: currentSettings.showWidgetName || false,
-          widgetName: currentSettings.widgetName || '',
-        });
-      }
       setWixReady(true);
-    } else {
-      fetchConfig();
     }
   }, []);
 
