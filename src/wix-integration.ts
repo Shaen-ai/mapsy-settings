@@ -118,14 +118,19 @@ export async function fetchWithAuth(url: string, options?: RequestInit): Promise
 }
 
 async function updateWidgetProperty(property: string, value: any): Promise<boolean> {
+  console.log(`[Settings] 📤 Calling widget.setProp('${property}', '${value}')`);
+
   if (!wixClient || !wixClient.widget || !wixClient.widget.setProp) {
+    console.log('[Settings] ❌ Wix client or widget.setProp not available');
     return false;
   }
 
   try {
     await wixClient.widget.setProp(property, String(value));
+    console.log(`[Settings] ✅ widget.setProp('${property}') succeeded`);
     return true;
-  } catch {
+  } catch (error) {
+    console.error(`[Settings] ❌ widget.setProp('${property}') failed:`, error);
     return false;
   }
 }
