@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FiSave, FiEye, FiEyeOff, FiMap, FiList } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { widgetConfigService, WidgetConfig } from '../services/api';
+import { updateWidgetConfig } from '../wix-integration';
 
 interface WidgetSettingsProps {
   onClose?: () => void;
@@ -36,7 +37,14 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
   const saveConfig = async () => {
     try {
       setLoading(true);
+
+      // Save to database
       await widgetConfigService.updateConfig(config);
+
+      // Notify widget via Wix SDK to update immediately
+      const wixUpdateSuccess = await updateWidgetConfig(config);
+      console.log('[Settings] Wix SDK widget update:', wixUpdateSuccess ? 'success' : 'failed');
+
       toast.success('Widget settings saved successfully');
       if (onClose) onClose();
     } catch (error) {

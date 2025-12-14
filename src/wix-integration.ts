@@ -133,6 +133,7 @@ async function updateWidgetProperty(property: string, value: any): Promise<boole
 export async function updateWidgetConfig(config: Record<string, any>): Promise<boolean> {
   let success = true;
 
+  // Update widget properties via Wix SDK
   for (const [key, value] of Object.entries(config)) {
     const result = await updateWidgetProperty(key, value);
     if (!result) {
@@ -141,6 +142,22 @@ export async function updateWidgetConfig(config: Record<string, any>): Promise<b
   }
 
   await updateWidgetProperty('config', JSON.stringify(config));
+
+  // Also send postMessage to notify the widget immediately
+  // This ensures the widget updates even if Wix SDK property change events don't fire
+  try {
+    if (typeof window !== 'undefined' && window.parent) {
+      window.parent.postMessage({
+        type: 'configUpdate',
+        config: config,
+        source: 'mapsy-settings'
+      }, '*');
+      console.log('[Settings] Sent configUpdate postMessage to widget');
+    }
+  } catch (e) {
+    console.log('[Settings] Could not send postMessage:', e);
+  }
+
   return success;
 }
 
