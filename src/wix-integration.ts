@@ -4,8 +4,7 @@
  */
 
 import { createClient } from '@wix/sdk';
-import { widget as editorWidget, editor } from '@wix/editor';
-import * as wixSettingsClient from '@wix/widget-sdk'; // Internal SDK for settings panel only
+import { widget, editor } from '@wix/editor';
 
 let wixClient: ReturnType<typeof createClient> | null = null;
 let instanceToken: string | null = null;
@@ -85,32 +84,37 @@ export async function initializeWixClient(): Promise<boolean> {
   if (isInitialized) return true;
 
   try {
-    // Editor client (for fetchWithAuth and dashboard)
-    wixClient = createClient({ host: editor.host(), modules: { widget: editorWidget } });
+    // Create Wix client with editor.host() and widget module
+    wixClient = createClient({
+      host: editor.host(),
+      modules: { widget }
+    });
 
-    // Settings panel client (official SDK)
-    await wixSettingsClient.ready();
-
-    // Try to get existing compId from site data
-    try {
-      const existingCompId = await wixSettingsClient.widget.getProp('compId');
-      if (existingCompId) {
-        compId = existingCompId as string;
-        console.log('[Settings] ✅ Got existing compId from site data:', compId);
+    // Try to get existing compId from widget props (persisted site data)
+    if (wixClient.widget && wixClient.widget.getProp) {
+      try {
+        const existingCompId = await wixClient.widget.getProp('compId');
+        if (existingCompId) {
+          compId = existingCompId as string;
+          console.log('[Settings] ✅ Got existing compId from site data:', compId);
+        }
+      } catch (e) {
+        console.warn('[Settings] ⚠️ Could not read compId from site data:', e);
       }
-    } catch (e) {
-      console.warn('[Settings] ⚠️ Could not read compId from site data:', e);
     }
 
-    // If no compId exists, generate one and save it to site data
+    // If no compId exists, generate one and save it to widget props (site data)
     if (!compId) {
       compId = generateCompId();
       console.log('[Settings] 🆕 Generated new compId:', compId);
-      try {
-        await wixSettingsClient.widget.setProp('compId', compId);
-        console.log('[Settings] ✅ Saved compId to site data');
-      } catch (e) {
-        console.error('[Settings] ❌ Could not save compId to site data:', e);
+
+      if (wixClient.widget && wixClient.widget.setProp) {
+        try {
+          await wixClient.widget.setProp('compId', compId);
+          console.log('[Settings] ✅ Saved compId to site data');
+        } catch (e) {
+          console.error('[Settings] ❌ Could not save compId to site data:', e);
+        }
       }
     }
 
@@ -119,6 +123,7 @@ export async function initializeWixClient(): Promise<boolean> {
   } catch (error) {
     console.error('[Settings] ❌ Wix SDK init failed:', error);
 
+    // Fallback: generate compId even if Wix SDK fails
     if (!compId) {
       compId = generateCompId();
       console.log('[Settings] 🔄 Fallback: Generated compId:', compId);
@@ -133,8 +138,8 @@ export async function initializeWixClient(): Promise<boolean> {
 // Update widget configuration
 // ----------------------
 export async function updateWidgetConfig(config: Record<string, any>): Promise<boolean> {
-  if (!wixSettingsClient?.widget?.setProps) {
-    console.error('[Settings] ❌ Wix settings SDK or widget.setProps not available');
+  if (!wixClient || !wixClient.widget || !wixClient.widget.setProps) {
+    console.error('[Settings] ❌ Wix client or widget.setProps not available');
     return false;
   }
 
@@ -150,7 +155,7 @@ export async function updateWidgetConfig(config: Record<string, any>): Promise<b
 
   try {
     console.log('[Settings] 📤 Calling widget.setProps with:', props);
-    await wixSettingsClient.widget.setProps(props);
+    await wixClient.widget.setProps(props);
     console.log('[Settings] ✅ widget.setProps completed successfully');
     return true;
   } catch (error) {
