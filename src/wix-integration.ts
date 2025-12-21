@@ -147,22 +147,43 @@ async function updateWidgetProperty(property: string, value: any): Promise<boole
 }
 
 export async function updateWidgetConfig(config: Record<string, any>): Promise<boolean> {
-  // ✅ FIX: Only send config as a single JSON string instead of multiple setProp calls
-  // This prevents Wix from trying to call setAttribute multiple times on a potentially null element
-
   console.log('[Settings] 📤 Updating widget with config:', config);
 
-  // Send the entire config as a single JSON string
-  // The widget will parse this in its 'config' attribute handler
-  const result = await updateWidgetProperty('config', JSON.stringify(config));
+  // Method 1: Try to update via Wix SDK (may not work for self-hosted widgets)
+  const wixResult = await updateWidgetProperty('config', JSON.stringify(config));
 
-  if (result) {
-    console.log('[Settings] ✅ Widget config updated successfully');
-  } else {
-    console.warn('[Settings] ⚠️ Widget config update may have failed (element might not be ready)');
+  // Method 2: Use postMessage to communicate directly with widget (more reliable)
+  try {
+    // Find the widget iframe or window
+    const message = {
+      type: 'MAPSY_CONFIG_UPDATE',
+      config: config,
+      source: 'settings-panel',
+      timestamp: Date.now()
+    };
+
+    // Post message to all frames (widget will filter by type)
+    if (window.parent) {
+      window.parent.postMessage(message, '*');
+      console.log('[Settings] 📤 Posted config update via postMessage');
+    }
+
+    // Also broadcast to all iframes
+    const frames = window.parent?.frames || [];
+    for (let i = 0; i < frames.length; i++) {
+      try {
+        frames[i].postMessage(message, '*');
+      } catch (e) {
+        // Ignore cross-origin errors
+      }
+    }
+
+    console.log('[Settings] ✅ Widget config update sent via postMessage');
+    return true;
+  } catch (error) {
+    console.error('[Settings] ❌ Failed to send config via postMessage:', error);
+    return wixResult;
   }
-
-  return result;
 }
 
 export function setInstanceToken(token: string): void {

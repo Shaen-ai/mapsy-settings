@@ -83,8 +83,12 @@ function WidgetSettingsCompact() {
     setConfig(prev => {
       const newConfig = { ...prev, ...configUpdate };
 
-      // Update widget immediately for live preview (don't await - fire and forget)
-      updateWidgetConfig(newConfig);
+      // Update widget in background (after state update completes)
+      Promise.resolve().then(() => {
+        updateWidgetConfig(newConfig).catch(err => {
+          console.error('[Settings] Failed to update widget preview:', err);
+        });
+      });
 
       return newConfig;
     });
