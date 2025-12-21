@@ -78,27 +78,26 @@ function WidgetSettingsCompact() {
     }
   };
 
-  const updateConfigOnServer = async (newConfig: WidgetConfig) => {
-    // Update UI immediately
-    setConfig(newConfig);
-    // Update Wix widget properties
-    await updateWidgetConfig(newConfig);
+  // Update widget preview interactively without saving to backend
+  const updateWidgetPreview = (configUpdate: Partial<WidgetConfig>) => {
+    setConfig(prev => {
+      const newConfig = { ...prev, ...configUpdate };
 
-    try {
-      // Save to server
-      await widgetConfigService.updateConfig(newConfig);
-      // Only update localStorage after server confirms
-      localStorage.setItem('mapsy-widget-config', JSON.stringify(newConfig));
-    } catch (error) {
-      console.error('Error saving config:', error);
-      toast.error('Failed to save setting');
-    }
+      // Update widget immediately for live preview (don't await - fire and forget)
+      updateWidgetConfig(newConfig);
+
+      return newConfig;
+    });
   };
 
   const handleSave = async () => {
     try {
       setSaving(true);
+      // Save to backend
       await widgetConfigService.updateConfig(config);
+      // Update widget with saved config
+      await updateWidgetConfig(config);
+      // Update localStorage after successful save
       localStorage.setItem('mapsy-widget-config', JSON.stringify(config));
       toast.success('Settings saved!');
     } catch (error) {
@@ -140,7 +139,7 @@ function WidgetSettingsCompact() {
           <input
             type="text"
             value={config.widgetName}
-            onChange={(e) => updateConfigOnServer({ ...config, widgetName: e.target.value })}
+            onChange={(e) => updateWidgetPreview({ widgetName: e.target.value })}
             className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white/80"
             placeholder="e.g., Homepage Map, Store Locator"
           />
@@ -154,7 +153,7 @@ function WidgetSettingsCompact() {
               Display Widget Name
             </label>
             <button
-              onClick={() => updateConfigOnServer({ ...config, showWidgetName: !config.showWidgetName })}
+              onClick={() => updateWidgetPreview({ showWidgetName: !config.showWidgetName })}
               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all ${
                 config.showWidgetName ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-gray-300'
               }`}
@@ -176,7 +175,7 @@ function WidgetSettingsCompact() {
           </label>
           <div className="grid grid-cols-2 gap-1.5">
             <button
-              onClick={() => updateConfigOnServer({ ...config, defaultView: 'map' })}
+              onClick={() => updateWidgetPreview({ defaultView: 'map' })}
               className={`flex items-center justify-center px-2 py-1.5 text-xs rounded-md border transition-all ${
                 config.defaultView === 'map'
                   ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-400 text-blue-700 font-medium shadow-sm'
@@ -187,7 +186,7 @@ function WidgetSettingsCompact() {
               Map
             </button>
             <button
-              onClick={() => updateConfigOnServer({ ...config, defaultView: 'list' })}
+              onClick={() => updateWidgetPreview({ defaultView: 'list' })}
               className={`flex items-center justify-center px-2 py-1.5 text-xs rounded-md border transition-all ${
                 config.defaultView === 'list'
                   ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-400 text-blue-700 font-medium shadow-sm'
@@ -207,7 +206,7 @@ function WidgetSettingsCompact() {
               Show Widget Header
             </label>
             <button
-              onClick={() => updateConfigOnServer({ ...config, showHeader: !config.showHeader })}
+              onClick={() => updateWidgetPreview({ showHeader: !config.showHeader })}
               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-all ${
                 config.showHeader ? 'bg-gradient-to-r from-blue-500 to-purple-500' : 'bg-gray-300'
               }`}
@@ -230,7 +229,7 @@ function WidgetSettingsCompact() {
             <input
               type="text"
               value={config.headerTitle}
-              onChange={(e) => updateConfigOnServer({ ...config, headerTitle: e.target.value })}
+              onChange={(e) => updateWidgetPreview({ headerTitle: e.target.value })}
               className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white/80"
               placeholder="Enter title"
             />
@@ -248,7 +247,7 @@ function WidgetSettingsCompact() {
               min="8"
               max="18"
               value={config.mapZoomLevel}
-              onChange={(e) => updateConfigOnServer({ ...config, mapZoomLevel: parseInt(e.target.value) })}
+              onChange={(e) => updateWidgetPreview({ mapZoomLevel: parseInt(e.target.value) })}
               className="flex-1 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer"
               style={{
                 background: `linear-gradient(to right, rgb(59 130 246) 0%, rgb(59 130 246) ${((config.mapZoomLevel - 8) * 10)}%, rgb(229 231 235) ${((config.mapZoomLevel - 8) * 10)}%, rgb(229 231 235) 100%)`
@@ -269,7 +268,7 @@ function WidgetSettingsCompact() {
             {colorOptions.map((color) => (
               <button
                 key={color.value}
-                onClick={() => updateConfigOnServer({ ...config, primaryColor: color.value })}
+                onClick={() => updateWidgetPreview({ primaryColor: color.value })}
                 className={`relative w-7 h-7 rounded-md ${color.class} transition-all hover:scale-110 ${
                   config.primaryColor === color.value ? 'ring-2 ring-offset-1 ring-blue-400 scale-110' : ''
                 }`}

@@ -1,5 +1,4 @@
-import { Location } from '../types/location';
-import { fetchWithAuth, getCompId } from '../wix-integration';
+import { fetchWithAuth } from '../wix-integration';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://mapsy-api.nextechspires.com/api';
 
@@ -21,59 +20,10 @@ async function apiRequest<T>(
   return response.json();
 }
 
-/**
- * Make a FormData request (for file uploads)
- * Note: fetchWithAuth handles auth, but we need special handling for FormData
- */
-async function apiFormDataRequest<T>(
-  endpoint: string,
-  formData: FormData,
-  method: 'POST' | 'PUT' = 'POST'
-): Promise<T> {
-  const url = `${API_URL}${endpoint}`;
-  const compId = getCompId();
+// apiFormDataRequest removed - not needed for widget config management
 
-  // For FormData, we let the browser set Content-Type (with boundary)
-  const headers: Record<string, string> = {};
-  if (compId) {
-    headers['X-Wix-Comp-Id'] = compId;
-  }
-
-  const response = await fetchWithAuth(url, {
-    method,
-    body: formData,
-    headers,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`API Error (${response.status}): ${errorText}`);
-  }
-
-  return response.json();
-}
-
-export const locationService = {
-  getAll: async (): Promise<Location[]> => {
-    return apiRequest<Location[]>('/locations', { method: 'GET' });
-  },
-
-  getOne: async (id: string | number): Promise<Location> => {
-    return apiRequest<Location>(`/locations/${id}`, { method: 'GET' });
-  },
-
-  create: async (formData: FormData): Promise<Location> => {
-    return apiFormDataRequest<Location>('/locations', formData, 'POST');
-  },
-
-  update: async (id: string | number, formData: FormData): Promise<Location> => {
-    return apiFormDataRequest<Location>(`/locations/${id}`, formData, 'POST');
-  },
-
-  delete: async (id: string | number): Promise<void> => {
-    await apiRequest<void>(`/locations/${id}`, { method: 'DELETE' });
-  },
-};
+// Location service removed - location management now handled by dashboard
+// Keeping apiRequest and apiFormDataRequest for future use if needed
 
 export interface AuthInfo {
   instanceId: string | null;

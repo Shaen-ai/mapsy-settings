@@ -119,7 +119,10 @@ export async function fetchWithAuth(url: string, options?: RequestInit): Promise
 }
 
 async function updateWidgetProperty(property: string, value: any): Promise<boolean> {
-  console.log(`[Settings] 📤 Calling widget.setProp('${property}', '${value}')`);
+  const displayValue = typeof value === 'string' && value.length > 50
+    ? value.substring(0, 50) + '...'
+    : value;
+  console.log(`[Settings] 📤 Calling widget.setProp('${property}', '${displayValue}')`);
 
   if (!wixClient || !wixClient.widget || !wixClient.widget.setProp) {
     console.log('[Settings] ❌ Wix client or widget.setProp not available');
@@ -130,28 +133,36 @@ async function updateWidgetProperty(property: string, value: any): Promise<boole
     await wixClient.widget.setProp(property, String(value));
     console.log(`[Settings] ✅ widget.setProp('${property}') succeeded`);
     return true;
-  } catch (error) {
-    console.error(`[Settings] ❌ widget.setProp('${property}') failed:`, error);
+  } catch (error: any) {
+    // Wix editor may throw errors if widget element doesn't exist yet
+    // This is expected in preview mode, so just log a warning
+    const errorMsg = error?.message || String(error);
+    if (errorMsg.includes('setAttribute') || errorMsg.includes('null')) {
+      console.warn(`[Settings] ⚠️ widget.setProp('${property}') - element not ready:`, errorMsg);
+    } else {
+      console.error(`[Settings] ❌ widget.setProp('${property}') failed:`, error);
+    }
     return false;
   }
 }
 
 export async function updateWidgetConfig(config: Record<string, any>): Promise<boolean> {
-  let success = true;
+  // ✅ FIX: Only send config as a single JSON string instead of multiple setProp calls
+  // This prevents Wix from trying to call setAttribute multiple times on a potentially null element
 
-  // Update widget properties via Wix SDK
-  // Each property change will trigger attributeChangedCallback in the widget's custom element
-  for (const [key, value] of Object.entries(config)) {
-    const result = await updateWidgetProperty(key, value);
-    if (!result) {
-      success = false;
-    }
+  console.log('[Settings] 📤 Updating widget with config:', config);
+
+  // Send the entire config as a single JSON string
+  // The widget will parse this in its 'config' attribute handler
+  const result = await updateWidgetProperty('config', JSON.stringify(config));
+
+  if (result) {
+    console.log('[Settings] ✅ Widget config updated successfully');
+  } else {
+    console.warn('[Settings] ⚠️ Widget config update may have failed (element might not be ready)');
   }
 
-  // Also update the full config as a JSON string
-  await updateWidgetProperty('config', JSON.stringify(config));
-
-  return success;
+  return result;
 }
 
 export function setInstanceToken(token: string): void {
