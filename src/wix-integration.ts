@@ -119,31 +119,6 @@ export async function fetchWithAuth(url: string, options?: RequestInit): Promise
   return fetch(url, { ...options, headers });
 }
 
-async function updateWidgetProperty(property: string, value: any): Promise<boolean> {
-  console.log(`[Settings] 📤 Calling wixClient.widget.setProp('${property}', value)`);
-  console.log('[Settings] Wix client exists:', !!wixClient);
-  console.log('[Settings] widget module exists:', !!wixClient?.widget);
-  console.log('[Settings] setProp method exists:', !!wixClient?.widget?.setProp);
-
-  if (!wixClient || !wixClient.widget || !wixClient.widget.setProp) {
-    console.error('[Settings] ❌ Wix client or widget.setProp not available');
-    console.error('[Settings] This means the Wix SDK is not initialized correctly');
-    return false;
-  }
-
-  try {
-    console.log(`[Settings] Executing: wixClient.widget.setProp('${property}', <value>)`);
-    await wixClient.widget.setProp(property, String(value));
-    console.log(`[Settings] ✅ widget.setProp('${property}') completed successfully`);
-    return true;
-  } catch (error: any) {
-    console.error(`[Settings] ❌ widget.setProp('${property}') threw error:`, error);
-    console.error('[Settings] Error message:', error?.message);
-    console.error('[Settings] Error stack:', error?.stack);
-    return false;
-  }
-}
-
 export async function updateWidgetConfig(config: Record<string, any>): Promise<boolean> {
   console.log('[Settings] 📤 Updating widget with config:', config);
 
