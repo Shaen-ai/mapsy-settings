@@ -5,10 +5,9 @@
 
 import { createClient } from '@wix/sdk';
 import { widget as editorWidget, editor } from '@wix/editor';
-import wixClientSDK from '@wix/widget-sdk'; // ✅ Add this
+import * as wixSettingsClient from '@wix/widget-sdk'; // Internal SDK for settings panel only
 
 let wixClient: ReturnType<typeof createClient> | null = null;
-let wixSettingsClient = wixClientSDK; // ✅ Official settings panel SDK
 let instanceToken: string | null = null;
 let compId: string | null = null;
 let isInitialized = false;
@@ -22,9 +21,12 @@ if (typeof window !== 'undefined') {
   }
 }
 
+// ----------------------
+// Utility to generate a unique component ID
+// ----------------------
 function generateCompId(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  const timestamp = Date.now(); // milliseconds
+  const timestamp = Date.now();
   let randomPart = '';
   for (let i = 0; i < 8; i++) {
     randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -32,22 +34,64 @@ function generateCompId(): string {
   return `comp-${timestamp}-${randomPart}`;
 }
 
-export async function initializeWixClient(): Promise<boolean> {
-  if (isInitialized && wixClient) {
-    return true;
+// ----------------------
+// Exports (for external modules)
+// ----------------------
+export function setInstanceToken(token: string): void {
+  instanceToken = token;
+}
+
+export function setCompId(id: string): void {
+  compId = id;
+}
+
+export function getCompId(): string | null {
+  return compId;
+}
+
+// ----------------------
+// Authenticated fetch
+// ----------------------
+export async function fetchWithAuth(url: string, options?: RequestInit): Promise<Response> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options?.headers as Record<string, string>),
+  };
+  if (compId) headers['X-Wix-Comp-Id'] = compId;
+
+  const fetchOptions: RequestInit = { ...options, headers };
+
+  if (wixClient?.fetchWithAuth) {
+    try {
+      return await wixClient.fetchWithAuth(url, fetchOptions);
+    } catch (e) {
+      console.warn('[Settings] fetchWithAuth failed, falling back', e);
+    }
   }
 
+  if (instanceToken) {
+    headers['Authorization'] = instanceToken.startsWith('Bearer ')
+      ? instanceToken
+      : `Bearer ${instanceToken}`;
+  }
+
+  return fetch(url, fetchOptions);
+}
+
+// ----------------------
+// Initialize Wix clients
+// ----------------------
+export async function initializeWixClient(): Promise<boolean> {
+  if (isInitialized) return true;
+
   try {
-    // Editor client (for fetchWithAuth, dashboard, etc.)
-    wixClient = createClient({
-      host: editor.host(),
-      modules: { widget: editorWidget },
-    });
+    // Editor client (for fetchWithAuth and dashboard)
+    wixClient = createClient({ host: editor.host(), modules: { widget: editorWidget } });
 
-    // Settings panel client (official widget SDK)
-    await wixSettingsClient.ready(); // ✅ wait for SDK ready
+    // Settings panel client (official SDK)
+    await wixSettingsClient.ready();
 
-    // Try to get compId from widget props (persisted site data)
+    // Try to get existing compId from site data
     try {
       const existingCompId = await wixSettingsClient.widget.getProp('compId');
       if (existingCompId) {
@@ -55,14 +99,13 @@ export async function initializeWixClient(): Promise<boolean> {
         console.log('[Settings] ✅ Got existing compId from site data:', compId);
       }
     } catch (e) {
-      console.log('[Settings] ⚠️ Could not read compId from site data:', e);
+      console.warn('[Settings] ⚠️ Could not read compId from site data:', e);
     }
 
-    // If no compId exists, generate one and save it to widget props (site data)
+    // If no compId exists, generate one and save it to site data
     if (!compId) {
       compId = generateCompId();
-      console.log('[Settings] 🆕 Generated new compId with timestamp:', compId);
-
+      console.log('[Settings] 🆕 Generated new compId:', compId);
       try {
         await wixSettingsClient.widget.setProp('compId', compId);
         console.log('[Settings] ✅ Saved compId to site data');
@@ -76,7 +119,6 @@ export async function initializeWixClient(): Promise<boolean> {
   } catch (error) {
     console.error('[Settings] ❌ Wix SDK init failed:', error);
 
-    // Fallback: generate compId even if Wix SDK fails
     if (!compId) {
       compId = generateCompId();
       console.log('[Settings] 🔄 Fallback: Generated compId:', compId);
@@ -87,30 +129,29 @@ export async function initializeWixClient(): Promise<boolean> {
   }
 }
 
+// ----------------------
+// Update widget configuration
+// ----------------------
 export async function updateWidgetConfig(config: Record<string, any>): Promise<boolean> {
-  console.log('[Settings] 📤 Updating widget with config:', config);
-
   if (!wixSettingsClient?.widget?.setProps) {
     console.error('[Settings] ❌ Wix settings SDK or widget.setProps not available');
     return false;
   }
 
-  try {
-    // ✅ Use proper types (no stringifying booleans/numbers)
-    const props = {
-      defaultView: config.defaultView ?? 'map',
-      showHeader: !!config.showHeader,
-      headerTitle: config.headerTitle ?? 'Our Locations',
-      mapZoomLevel: Number(config.mapZoomLevel ?? 12),
-      primaryColor: config.primaryColor ?? '#3B82F6',
-      showWidgetName: !!config.showWidgetName,
-      widgetName: config.widgetName ?? '',
-    };
+  const props = {
+    defaultView: config.defaultView ?? 'map',
+    showHeader: !!config.showHeader,
+    headerTitle: config.headerTitle ?? 'Our Locations',
+    mapZoomLevel: Number(config.mapZoomLevel ?? 12),
+    primaryColor: config.primaryColor ?? '#3B82F6',
+    showWidgetName: !!config.showWidgetName,
+    widgetName: config.widgetName ?? '',
+  };
 
+  try {
     console.log('[Settings] 📤 Calling widget.setProps with:', props);
     await wixSettingsClient.widget.setProps(props);
     console.log('[Settings] ✅ widget.setProps completed successfully');
-
     return true;
   } catch (error) {
     console.error('[Settings] ❌ Failed to update widget config:', error);
@@ -118,4 +159,19 @@ export async function updateWidgetConfig(config: Record<string, any>): Promise<b
   }
 }
 
-// fetchWithAuth and other helpers remain unchanged
+// ----------------------
+// Generate dashboard URL
+// ----------------------
+export function getDashboardUrl(baseUrl: string = 'https://mapsy-dashboard.nextechspires.com/'): string {
+  const url = new URL(baseUrl);
+  if (instanceToken) url.searchParams.set('instance', instanceToken);
+  if (compId) url.searchParams.set('compId', compId);
+  return url.toString();
+}
+
+// ----------------------
+// Auto-initialize on module load
+// ----------------------
+if (typeof window !== 'undefined') {
+  initializeWixClient();
+}
