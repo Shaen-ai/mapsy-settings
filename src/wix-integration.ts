@@ -147,61 +147,32 @@ async function updateWidgetProperty(property: string, value: any): Promise<boole
 export async function updateWidgetConfig(config: Record<string, any>): Promise<boolean> {
   console.log('[Settings] 📤 Updating widget with config:', config);
 
-  // Wix SDK requires setting each property individually, not as a JSON blob
-  // Map camelCase to kebab-case for HTML attributes
-  const propertyMap: Record<string, string> = {
-    'defaultView': 'default-view',
-    'showHeader': 'show-header',
-    'headerTitle': 'header-title',
-    'mapZoomLevel': 'map-zoom-level',
-    'primaryColor': 'primary-color',
-    'showWidgetName': 'show-widget-name',
-    'widgetName': 'widget-name',
-  };
-
-  let allSuccess = true;
-
-  // Set each property individually via Wix SDK
-  for (const [key, value] of Object.entries(config)) {
-    // Skip auth and other non-display properties
-    if (key === 'auth' || key === 'premiumPlanName') continue;
-
-    const attributeName = propertyMap[key] || key;
-    const stringValue = String(value);
-
-    console.log(`[Settings] Setting ${attributeName} = ${stringValue}`);
-    const success = await updateWidgetProperty(attributeName, stringValue);
-    if (!success) allSuccess = false;
+  if (!wixClient || !wixClient.widget || !wixClient.widget.setProps) {
+    console.error('[Settings] ❌ Wix client or widget.setProps not available');
+    return false;
   }
 
-  // Also use postMessage as backup
   try {
-    const message = {
-      type: 'MAPSY_CONFIG_UPDATE',
-      config: config,
-      source: 'settings-panel',
-      timestamp: Date.now()
+    // Use Wix SDK setProps to update all widget properties at once
+    // This is the official Wix way to update widget configuration
+    const props = {
+      'default-view': String(config.defaultView || 'map'),
+      'show-header': String(config.showHeader || false),
+      'header-title': String(config.headerTitle || 'Our Locations'),
+      'map-zoom-level': String(config.mapZoomLevel || 12),
+      'primary-color': String(config.primaryColor || '#3B82F6'),
+      'show-widget-name': String(config.showWidgetName || false),
+      'widget-name': String(config.widgetName || ''),
     };
 
-    if (window.parent) {
-      window.parent.postMessage(message, '*');
-      console.log('[Settings] 📤 Posted config update via postMessage');
-    }
+    console.log('[Settings] 📤 Calling widget.setProps with:', props);
+    await wixClient.widget.setProps(props);
+    console.log('[Settings] ✅ widget.setProps completed successfully');
 
-    const frames = window.parent?.frames || [];
-    for (let i = 0; i < frames.length; i++) {
-      try {
-        frames[i].postMessage(message, '*');
-      } catch (e) {
-        // Ignore cross-origin errors
-      }
-    }
-
-    console.log('[Settings] ✅ Widget config update sent');
     return true;
   } catch (error) {
-    console.error('[Settings] ❌ Failed to send config via postMessage:', error);
-    return allSuccess;
+    console.error('[Settings] ❌ Failed to update widget config:', error);
+    return false;
   }
 }
 
