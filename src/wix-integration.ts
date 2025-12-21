@@ -36,8 +36,9 @@ export async function initializeWixClient(): Promise<boolean> {
   }
 
   try {
+    // For settings panel in editor context, use editor.host() without auth
+    // This is the correct way per Wix documentation
     wixClient = createClient({
-      auth: editor.auth(),
       host: editor.host(),
       modules: { widget },
     });
@@ -119,29 +120,26 @@ export async function fetchWithAuth(url: string, options?: RequestInit): Promise
 }
 
 async function updateWidgetProperty(property: string, value: any): Promise<boolean> {
-  const displayValue = typeof value === 'string' && value.length > 50
-    ? value.substring(0, 50) + '...'
-    : value;
-  console.log(`[Settings] 📤 Calling widget.setProp('${property}', '${displayValue}')`);
+  console.log(`[Settings] 📤 Calling wixClient.widget.setProp('${property}', value)`);
+  console.log('[Settings] Wix client exists:', !!wixClient);
+  console.log('[Settings] widget module exists:', !!wixClient?.widget);
+  console.log('[Settings] setProp method exists:', !!wixClient?.widget?.setProp);
 
   if (!wixClient || !wixClient.widget || !wixClient.widget.setProp) {
-    console.log('[Settings] ❌ Wix client or widget.setProp not available');
+    console.error('[Settings] ❌ Wix client or widget.setProp not available');
+    console.error('[Settings] This means the Wix SDK is not initialized correctly');
     return false;
   }
 
   try {
+    console.log(`[Settings] Executing: wixClient.widget.setProp('${property}', <value>)`);
     await wixClient.widget.setProp(property, String(value));
-    console.log(`[Settings] ✅ widget.setProp('${property}') succeeded`);
+    console.log(`[Settings] ✅ widget.setProp('${property}') completed successfully`);
     return true;
   } catch (error: any) {
-    // Wix editor may throw errors if widget element doesn't exist yet
-    // This is expected in preview mode, so just log a warning
-    const errorMsg = error?.message || String(error);
-    if (errorMsg.includes('setAttribute') || errorMsg.includes('null')) {
-      console.warn(`[Settings] ⚠️ widget.setProp('${property}') - element not ready:`, errorMsg);
-    } else {
-      console.error(`[Settings] ❌ widget.setProp('${property}') failed:`, error);
-    }
+    console.error(`[Settings] ❌ widget.setProp('${property}') threw error:`, error);
+    console.error('[Settings] Error message:', error?.message);
+    console.error('[Settings] Error stack:', error?.stack);
     return false;
   }
 }
