@@ -147,12 +147,35 @@ async function updateWidgetProperty(property: string, value: any): Promise<boole
 export async function updateWidgetConfig(config: Record<string, any>): Promise<boolean> {
   console.log('[Settings] 📤 Updating widget with config:', config);
 
-  // Method 1: Try to update via Wix SDK (may not work for self-hosted widgets)
-  const wixResult = await updateWidgetProperty('config', JSON.stringify(config));
+  // Wix SDK requires setting each property individually, not as a JSON blob
+  // Map camelCase to kebab-case for HTML attributes
+  const propertyMap: Record<string, string> = {
+    'defaultView': 'default-view',
+    'showHeader': 'show-header',
+    'headerTitle': 'header-title',
+    'mapZoomLevel': 'map-zoom-level',
+    'primaryColor': 'primary-color',
+    'showWidgetName': 'show-widget-name',
+    'widgetName': 'widget-name',
+  };
 
-  // Method 2: Use postMessage to communicate directly with widget (more reliable)
+  let allSuccess = true;
+
+  // Set each property individually via Wix SDK
+  for (const [key, value] of Object.entries(config)) {
+    // Skip auth and other non-display properties
+    if (key === 'auth' || key === 'premiumPlanName') continue;
+
+    const attributeName = propertyMap[key] || key;
+    const stringValue = String(value);
+
+    console.log(`[Settings] Setting ${attributeName} = ${stringValue}`);
+    const success = await updateWidgetProperty(attributeName, stringValue);
+    if (!success) allSuccess = false;
+  }
+
+  // Also use postMessage as backup
   try {
-    // Find the widget iframe or window
     const message = {
       type: 'MAPSY_CONFIG_UPDATE',
       config: config,
@@ -160,13 +183,11 @@ export async function updateWidgetConfig(config: Record<string, any>): Promise<b
       timestamp: Date.now()
     };
 
-    // Post message to all frames (widget will filter by type)
     if (window.parent) {
       window.parent.postMessage(message, '*');
       console.log('[Settings] 📤 Posted config update via postMessage');
     }
 
-    // Also broadcast to all iframes
     const frames = window.parent?.frames || [];
     for (let i = 0; i < frames.length; i++) {
       try {
@@ -176,11 +197,11 @@ export async function updateWidgetConfig(config: Record<string, any>): Promise<b
       }
     }
 
-    console.log('[Settings] ✅ Widget config update sent via postMessage');
+    console.log('[Settings] ✅ Widget config update sent');
     return true;
   } catch (error) {
     console.error('[Settings] ❌ Failed to send config via postMessage:', error);
-    return wixResult;
+    return allSuccess;
   }
 }
 
