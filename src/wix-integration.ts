@@ -159,6 +159,7 @@ export async function updateWidgetConfig(config: Record<string, any>, onlyChange
     console.log('[Settings] 📤 Calling widget.setProp for properties:', props);
 
     // Set each property individually using setProp (singular)
+    // HTML will convert camelCase to lowercase automatically
     for (const [key, value] of Object.entries(props)) {
       await wixClient.widget.setProp(key, value);
     }
