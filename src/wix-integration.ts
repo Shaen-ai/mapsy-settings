@@ -138,8 +138,8 @@ export async function initializeWixClient(): Promise<boolean> {
 // Update widget configuration
 // ----------------------
 export async function updateWidgetConfig(config: Record<string, any>): Promise<boolean> {
-  if (!wixClient || !wixClient.widget || !wixClient.widget.setProps) {
-    console.error('[Settings] ❌ Wix client or widget.setProps not available');
+  if (!wixClient || !wixClient.widget || !wixClient.widget.setProp) {
+    console.error('[Settings] ❌ Wix client or widget.setProp not available');
     return false;
   }
 
@@ -154,9 +154,14 @@ export async function updateWidgetConfig(config: Record<string, any>): Promise<b
   };
 
   try {
-    console.log('[Settings] 📤 Calling widget.setProps with:', props);
-    await wixClient.widget.setProps(props);
-    console.log('[Settings] ✅ widget.setProps completed successfully');
+    console.log('[Settings] 📤 Calling widget.setProp for each property:', props);
+
+    // Set each property individually using setProp (singular)
+    for (const [key, value] of Object.entries(props)) {
+      await wixClient.widget.setProp(key, value);
+    }
+
+    console.log('[Settings] ✅ widget.setProp completed successfully for all properties');
     return true;
   } catch (error) {
     console.error('[Settings] ❌ Failed to update widget config:', error);
