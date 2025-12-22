@@ -83,9 +83,9 @@ function WidgetSettingsCompact() {
     setConfig(prev => {
       const newConfig = { ...prev, ...configUpdate };
 
-      // Update widget in background (after state update completes)
+      // Update widget in background with ONLY the changed properties
       Promise.resolve().then(() => {
-        updateWidgetConfig(newConfig).catch(err => {
+        updateWidgetConfig(configUpdate, true).catch(err => {
           console.error('[Settings] Failed to update widget preview:', err);
         });
       });

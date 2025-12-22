@@ -137,13 +137,15 @@ export async function initializeWixClient(): Promise<boolean> {
 // ----------------------
 // Update widget configuration
 // ----------------------
-export async function updateWidgetConfig(config: Record<string, any>): Promise<boolean> {
+export async function updateWidgetConfig(config: Record<string, any>, onlyChanged = false): Promise<boolean> {
   if (!wixClient || !wixClient.widget || !wixClient.widget.setProp) {
     console.error('[Settings] ❌ Wix client or widget.setProp not available');
     return false;
   }
 
-  const props = {
+  // If onlyChanged is true, only update the properties that are actually in the config object
+  // Otherwise, normalize all properties with defaults
+  const props = onlyChanged ? config : {
     defaultView: config.defaultView ?? 'map',
     showHeader: !!config.showHeader,
     headerTitle: config.headerTitle ?? 'Our Locations',
@@ -154,14 +156,14 @@ export async function updateWidgetConfig(config: Record<string, any>): Promise<b
   };
 
   try {
-    console.log('[Settings] 📤 Calling widget.setProp for each property:', props);
+    console.log('[Settings] 📤 Calling widget.setProp for properties:', props);
 
     // Set each property individually using setProp (singular)
     for (const [key, value] of Object.entries(props)) {
       await wixClient.widget.setProp(key, value);
     }
 
-    console.log('[Settings] ✅ widget.setProp completed successfully for all properties');
+    console.log('[Settings] ✅ widget.setProp completed successfully for', Object.keys(props).length, 'properties');
     return true;
   } catch (error) {
     console.error('[Settings] ❌ Failed to update widget config:', error);
