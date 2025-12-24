@@ -17,6 +17,9 @@ if (typeof window !== 'undefined') {
   const urlInstance = urlParams.get('instance');
   if (urlInstance) {
     instanceToken = urlInstance;
+    console.log('[Settings] 🔑 Instance token extracted from URL');
+  } else {
+    console.warn('[Settings] ⚠️ No instance token in URL - will rely on wixClient.fetchWithAuth');
   }
 }
 
@@ -56,24 +59,37 @@ export async function fetchWithAuth(url: string, options?: RequestInit): Promise
     'Content-Type': 'application/json',
     ...(options?.headers as Record<string, string>),
   };
-  if (compId) headers['X-Wix-Comp-Id'] = compId;
 
-  const fetchOptions: RequestInit = { ...options, headers };
-
-  if (wixClient?.fetchWithAuth) {
-    try {
-      return await wixClient.fetchWithAuth(url, fetchOptions);
-    } catch (e) {
-      console.warn('[Settings] fetchWithAuth failed, falling back', e);
-    }
+  // Add compId header if available
+  if (compId) {
+    headers['X-Wix-Comp-Id'] = compId;
+    console.log('[Settings] 🔑 Adding X-Wix-Comp-Id header:', compId);
   }
 
+  // Add instance token for authentication
   if (instanceToken) {
     headers['Authorization'] = instanceToken.startsWith('Bearer ')
       ? instanceToken
       : `Bearer ${instanceToken}`;
+    console.log('[Settings] 🔑 Adding Authorization header');
+  } else {
+    console.warn('[Settings] ⚠️ No instanceToken available for authentication');
   }
 
+  const fetchOptions: RequestInit = { ...options, headers };
+
+  // Try Wix SDK's fetchWithAuth first (it handles auth automatically)
+  if (wixClient?.fetchWithAuth) {
+    try {
+      console.log('[Settings] 📤 Using wixClient.fetchWithAuth for:', url);
+      return await wixClient.fetchWithAuth(url, fetchOptions);
+    } catch (e) {
+      console.warn('[Settings] ⚠️ wixClient.fetchWithAuth failed, falling back to regular fetch', e);
+    }
+  }
+
+  // Fallback to regular fetch with manual auth headers
+  console.log('[Settings] 📤 Using regular fetch with auth headers for:', url);
   return fetch(url, fetchOptions);
 }
 
@@ -84,11 +100,15 @@ export async function initializeWixClient(): Promise<boolean> {
   if (isInitialized) return true;
 
   try {
+    console.log('[Settings] 🔄 Initializing Wix client...');
+
     // Create Wix client with editor.host() and widget module
     wixClient = createClient({
       host: editor.host(),
       modules: { widget }
     });
+
+    console.log('[Settings] ✅ Wix client created');
 
     // Try to get existing compId from widget props (persisted site data)
     if (wixClient.widget && wixClient.widget.getProp) {
@@ -117,6 +137,14 @@ export async function initializeWixClient(): Promise<boolean> {
         }
       }
     }
+
+    // Log authentication status
+    console.log('[Settings] 🔑 Authentication status:', {
+      hasInstanceToken: !!instanceToken,
+      hasCompId: !!compId,
+      hasWixClient: !!wixClient,
+      hasWixFetchWithAuth: !!(wixClient?.fetchWithAuth)
+    });
 
     isInitialized = true;
     return true;
