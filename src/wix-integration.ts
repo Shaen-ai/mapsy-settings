@@ -90,6 +90,7 @@ export async function initializeWixClient(): Promise<boolean> {
     // Create Wix client with editor.host() and widget module
     wixClient = createClient({
       host: editor.host(),
+      auth: editor.auth(),
       modules: { widget }
     });
 
