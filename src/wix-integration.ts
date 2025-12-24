@@ -67,29 +67,27 @@ export async function fetchWithAuth(url: string, options?: RequestInit): Promise
   }
 
   // Add instance token for authentication
+  // IMPORTANT: Add this BEFORE creating fetchOptions so it's included in all requests
   if (instanceToken) {
     headers['Authorization'] = instanceToken.startsWith('Bearer ')
       ? instanceToken
       : `Bearer ${instanceToken}`;
     console.log('[Settings] 🔑 Adding Authorization header');
   } else {
-    console.warn('[Settings] ⚠️ No instanceToken available for authentication');
+    console.warn('[Settings] ⚠️ No instanceToken available - request will be unauthenticated');
+    console.log('[Settings] 💡 For authenticated requests, ensure instance token is in URL or widget props');
   }
 
   const fetchOptions: RequestInit = { ...options, headers };
 
-  // Try Wix SDK's fetchWithAuth first (it handles auth automatically)
+  // Always use wixClient.fetchWithAuth (it handles auth automatically for all requests)
   if (wixClient?.fetchWithAuth) {
-    try {
-      console.log('[Settings] 📤 Using wixClient.fetchWithAuth for:', url);
-      return await wixClient.fetchWithAuth(url, fetchOptions);
-    } catch (e) {
-      console.warn('[Settings] ⚠️ wixClient.fetchWithAuth failed, falling back to regular fetch', e);
-    }
+    console.log('[Settings] 📤 Using wixClient.fetchWithAuth for:', url);
+    return await wixClient.fetchWithAuth(url, fetchOptions);
   }
 
-  // Fallback to regular fetch with manual auth headers
-  console.log('[Settings] 📤 Using regular fetch with auth headers for:', url);
+  // Fallback to regular fetch with manual auth headers if Wix client not available
+  console.log('[Settings] 📤 Fallback: using regular fetch for:', url);
   return fetch(url, fetchOptions);
 }
 
@@ -110,7 +108,7 @@ export async function initializeWixClient(): Promise<boolean> {
 
     console.log('[Settings] ✅ Wix client created');
 
-    // Try to get existing compId from widget props (persisted site data)
+    // Try to get existing compId and instance from widget props (persisted site data)
     if (wixClient.widget && wixClient.widget.getProp) {
       try {
         const existingCompId = await wixClient.widget.getProp('compId');
@@ -118,8 +116,15 @@ export async function initializeWixClient(): Promise<boolean> {
           compId = existingCompId as string;
           console.log('[Settings] ✅ Got existing compId from site data:', compId);
         }
+
+        // Try to get instance token from widget props
+        const existingInstance = await wixClient.widget.getProp('instance');
+        if (existingInstance && !instanceToken) {
+          instanceToken = existingInstance as string;
+          console.log('[Settings] ✅ Got instance token from widget props');
+        }
       } catch (e) {
-        console.warn('[Settings] ⚠️ Could not read compId from site data:', e);
+        console.warn('[Settings] ⚠️ Could not read props from site data:', e);
       }
     }
 
