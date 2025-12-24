@@ -60,43 +60,22 @@ export async function fetchWithAuth(url: string, options?: RequestInit): Promise
     ...(options?.headers as Record<string, string>),
   };
 
-  // Add compId header if available
+  // Only add compId header (for backend to identify the widget instance)
   if (compId) {
     headers['X-Wix-Comp-Id'] = compId;
     console.log('[Settings] 🔑 Adding X-Wix-Comp-Id header:', compId);
   }
 
-  // Add instance token for authentication
-  if (instanceToken) {
-    headers['Authorization'] = instanceToken.startsWith('Bearer ')
-      ? instanceToken
-      : `Bearer ${instanceToken}`;
-    console.log('[Settings] 🔑 Adding Authorization header with instance token');
-  } else if (compId) {
-    // Fallback: use compId as authorization token if no instance token
-    headers['Authorization'] = `Bearer ${compId}`;
-    console.log('[Settings] 🔑 Adding Authorization header with compId (fallback)');
-  } else {
-    console.warn('[Settings] ⚠️ No authentication token available - request will be unauthenticated');
-  }
-
   const fetchOptions: RequestInit = { ...options, headers };
 
-  // Always use wixClient.fetchWithAuth (with our auth headers already included)
+  // Use wixClient.fetchWithAuth - it handles authentication automatically
   if (wixClient?.fetchWithAuth) {
-    try {
-      console.log('[Settings] 📤 Using wixClient.fetchWithAuth for:', url);
-      console.log('[Settings] 📋 Headers included:', Object.keys(headers).join(', '));
-      return await wixClient.fetchWithAuth(url, fetchOptions);
-    } catch (error) {
-      console.error('[Settings] ❌ wixClient.fetchWithAuth failed:', error);
-      console.log('[Settings] 🔄 Falling back to regular fetch');
-      // Fall through to regular fetch
-    }
+    console.log('[Settings] 📤 Using wixClient.fetchWithAuth for:', url);
+    return await wixClient.fetchWithAuth(url, fetchOptions);
   }
 
-  // Fallback: regular fetch with auth headers
-  console.log('[Settings] 📤 Using regular fetch (no Wix client available) for:', url);
+  // Fallback: regular fetch (should not happen in Wix environment)
+  console.warn('[Settings] ⚠️ No Wix client available - using regular fetch (unauthenticated)');
   return fetch(url, fetchOptions);
 }
 
