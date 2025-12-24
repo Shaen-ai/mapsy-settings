@@ -67,27 +67,36 @@ export async function fetchWithAuth(url: string, options?: RequestInit): Promise
   }
 
   // Add instance token for authentication
-  // IMPORTANT: Add this BEFORE creating fetchOptions so it's included in all requests
   if (instanceToken) {
     headers['Authorization'] = instanceToken.startsWith('Bearer ')
       ? instanceToken
       : `Bearer ${instanceToken}`;
-    console.log('[Settings] 🔑 Adding Authorization header');
+    console.log('[Settings] 🔑 Adding Authorization header with instance token');
+  } else if (compId) {
+    // Fallback: use compId as authorization token if no instance token
+    headers['Authorization'] = `Bearer ${compId}`;
+    console.log('[Settings] 🔑 Adding Authorization header with compId (fallback)');
   } else {
-    console.warn('[Settings] ⚠️ No instanceToken available - request will be unauthenticated');
-    console.log('[Settings] 💡 For authenticated requests, ensure instance token is in URL or widget props');
+    console.warn('[Settings] ⚠️ No authentication token available - request will be unauthenticated');
   }
 
   const fetchOptions: RequestInit = { ...options, headers };
 
-  // Always use wixClient.fetchWithAuth (it handles auth automatically for all requests)
+  // Always use wixClient.fetchWithAuth (with our auth headers already included)
   if (wixClient?.fetchWithAuth) {
-    console.log('[Settings] 📤 Using wixClient.fetchWithAuth for:', url);
-    return await wixClient.fetchWithAuth(url, fetchOptions);
+    try {
+      console.log('[Settings] 📤 Using wixClient.fetchWithAuth for:', url);
+      console.log('[Settings] 📋 Headers included:', Object.keys(headers).join(', '));
+      return await wixClient.fetchWithAuth(url, fetchOptions);
+    } catch (error) {
+      console.error('[Settings] ❌ wixClient.fetchWithAuth failed:', error);
+      console.log('[Settings] 🔄 Falling back to regular fetch');
+      // Fall through to regular fetch
+    }
   }
 
-  // Fallback to regular fetch with manual auth headers if Wix client not available
-  console.log('[Settings] 📤 Fallback: using regular fetch for:', url);
+  // Fallback: regular fetch with auth headers
+  console.log('[Settings] 📤 Using regular fetch (no Wix client available) for:', url);
   return fetch(url, fetchOptions);
 }
 
