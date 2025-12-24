@@ -60,41 +60,21 @@ export async function fetchWithAuth(url: string, options?: RequestInit): Promise
     ...(options?.headers as Record<string, string>),
   };
 
-  // Add compId header (for backend to identify the widget instance)
+  // Add compId header only
   if (compId) {
     headers['X-Wix-Comp-Id'] = compId;
-    console.log('[Settings] 🔑 Adding X-Wix-Comp-Id header:', compId);
   }
-
-  // Try to get access token from Wix SDK
-  let accessToken: string | undefined;
-  try {
-    if (wixClient) {
-      // Try to get the access token from Wix SDK auth context
-      const authHeaders = await (wixClient as any).auth?.getAuthHeaders?.();
-      if (authHeaders?.Authorization) {
-        accessToken = authHeaders.Authorization;
-        console.log('[Settings] ✅ Got access token from Wix SDK');
-      }
-    }
-  } catch (e) {
-    console.warn('[Settings] ⚠️ Could not get access token from Wix SDK:', e);
-  }
-
-  // Always add Authorization header (even if empty)
-  headers['Authorization'] = accessToken || '';
-  console.log('[Settings] 🔑 Authorization header:', accessToken ? 'present' : 'empty');
 
   const fetchOptions: RequestInit = { ...options, headers };
 
-  // Use wixClient.fetchWithAuth
+  // Use wixClient.fetchWithAuth - it handles authentication
   if (wixClient?.fetchWithAuth) {
-    console.log('[Settings] 📤 Using wixClient.fetchWithAuth for:', url);
+    console.log('[Settings] 📤 wixClient.fetchWithAuth:', url);
     return await wixClient.fetchWithAuth(url, fetchOptions);
   }
 
-  // Fallback: regular fetch
-  console.warn('[Settings] ⚠️ No Wix client available - using regular fetch');
+  // Fallback
+  console.warn('[Settings] ⚠️ No Wix client');
   return fetch(url, fetchOptions);
 }
 
