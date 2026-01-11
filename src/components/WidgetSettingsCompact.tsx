@@ -140,7 +140,7 @@ function WidgetSettingsCompact() {
   };
 
   const handleUpgrade = () => {
-    const APP_ID = 'YOUR_MAPSY_APP_ID'; // Replace with actual Mapsy app ID
+    const APP_ID = '0d076a26-ce6d-4d16-83c5-126cdf640aa4'; // Replace with actual Mapsy app ID
 
     // Try to get instanceId from state, or fall back to URL parameter
     const effectiveInstanceId = instanceIdState || getInstanceId();
