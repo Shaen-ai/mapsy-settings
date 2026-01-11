@@ -9,17 +9,25 @@ import { widget, editor } from '@wix/editor';
 let wixClient: ReturnType<typeof createClient> | null = null;
 let instanceToken: string | null = null;
 let compId: string | null = null;
+let instanceId: string | null = null;
 let isInitialized = false;
 
-// Extract instance token from URL on module load
+// Extract instance token and instanceId from URL on module load
 if (typeof window !== 'undefined') {
   const urlParams = new URLSearchParams(window.location.search);
   const urlInstance = urlParams.get('instance');
+  const urlInstanceId = urlParams.get('instanceId');
+
   if (urlInstance) {
     instanceToken = urlInstance;
     console.log('[Settings] 🔑 Instance token extracted from URL');
   } else {
     console.warn('[Settings] ⚠️ No instance token in URL - will rely on wixClient.fetchWithAuth');
+  }
+
+  if (urlInstanceId) {
+    instanceId = urlInstanceId;
+    console.log('[Settings] 🔑 Instance ID extracted from URL:', instanceId);
   }
 }
 
@@ -49,6 +57,14 @@ export function setCompId(id: string): void {
 
 export function getCompId(): string | null {
   return compId;
+}
+
+export function setInstanceId(id: string): void {
+  instanceId = id;
+}
+
+export function getInstanceId(): string | null {
+  return instanceId;
 }
 
 // ----------------------
@@ -200,6 +216,7 @@ export function getDashboardUrl(baseUrl: string = 'https://mapsy-dashboard.nexte
   const url = new URL(baseUrl);
   if (instanceToken) url.searchParams.set('instance', instanceToken);
   if (compId) url.searchParams.set('compId', compId);
+  if (instanceId) url.searchParams.set('instanceId', instanceId);
   return url.toString();
 }
 

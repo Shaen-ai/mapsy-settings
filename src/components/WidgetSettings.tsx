@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { FiSave, FiEye, FiEyeOff, FiMap, FiList } from 'react-icons/fi';
+import { FiSave, FiEye, FiEyeOff, FiMap, FiList, FiExternalLink } from 'react-icons/fi';
+import { MdDashboard, MdUpgrade } from 'react-icons/md';
 import toast from 'react-hot-toast';
-import { widgetConfigService, WidgetConfig } from '../services/api';
-import { updateWidgetConfig } from '../wix-integration';
+import { widgetConfigService, WidgetConfig, premiumAPI } from '../services/api';
+import { updateWidgetConfig, getDashboardUrl, getInstanceId, setInstanceId } from '../wix-integration';
 
 interface WidgetSettingsProps {
   onClose?: () => void;
@@ -20,17 +21,53 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
   });
 
   const [loading, setLoading] = useState(false);
+  const [premiumPlan, setPremiumPlan] = useState<string>('free');
+  const [instanceIdState, setInstanceIdState] = useState<string>('');
+  const [dashboardUrl, setDashboardUrl] = useState<string>('');
 
   useEffect(() => {
     fetchConfig();
+    loadPremiumStatus();
+    buildDashboard();
   }, []);
 
   const fetchConfig = async () => {
     try {
       const data = await widgetConfigService.getConfig();
       setConfig(data);
+
+      // Extract premium plan and instanceId from config if available
+      if (data.premiumPlanName) {
+        setPremiumPlan(data.premiumPlanName);
+      }
+      if (data.auth?.instanceId) {
+        setInstanceId(data.auth.instanceId);
+        setInstanceIdState(data.auth.instanceId);
+      }
     } catch (error) {
       console.error('Error fetching widget config:', error);
+    }
+  };
+
+  const loadPremiumStatus = async () => {
+    try {
+      const premiumData = await premiumAPI.getPremiumStatus();
+      if (premiumData && premiumData.premiumPlanName) {
+        setPremiumPlan(premiumData.premiumPlanName);
+      }
+    } catch (error) {
+      console.error('Error fetching premium status:', error);
+    }
+  };
+
+  const buildDashboard = () => {
+    const url = getDashboardUrl();
+    setDashboardUrl(url);
+
+    // Extract instanceId from URL if not already set
+    const urlInstanceId = getInstanceId();
+    if (urlInstanceId) {
+      setInstanceIdState(urlInstanceId);
     }
   };
 
@@ -55,9 +92,50 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
     }
   };
 
+  const handleUpgrade = () => {
+    const APP_ID = 'YOUR_MAPSY_APP_ID'; // Replace with actual Mapsy app ID
+
+    // Try to get instanceId from state, or fall back to URL parameter
+    const effectiveInstanceId = instanceIdState || getInstanceId();
+
+    const upgradeUrl = `https://www.wix.com/apps/upgrade/${APP_ID}${effectiveInstanceId ? `?appInstanceId=${effectiveInstanceId}` : ''}`;
+    console.log('Opening upgrade URL:', upgradeUrl, 'instanceId:', effectiveInstanceId);
+    window.open(upgradeUrl, '_blank');
+  };
+
   return (
     <div className="p-8">
       <div className="space-y-5">
+        {/* Upgrade and Dashboard buttons */}
+        <div className="space-y-3">
+          {/* Upgrade Button - Only show if not on highest plan */}
+          {premiumPlan !== 'business-pro' && (
+            <button
+              type="button"
+              onClick={handleUpgrade}
+              className="w-full px-4 py-3 border-2 border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 transition-all flex items-center justify-center gap-2 font-medium shadow-sm hover:shadow-md"
+            >
+              <MdUpgrade size={20} />
+              <span>Upgrade Plan</span>
+            </button>
+          )}
+
+          {/* Dashboard Button */}
+          <button
+            type="button"
+            onClick={() => {
+              console.log('Opening dashboard with URL:', dashboardUrl);
+              window.open(dashboardUrl || getDashboardUrl(), '_blank');
+            }}
+            disabled={!dashboardUrl}
+            className="w-full px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all flex items-center justify-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <MdDashboard size={20} />
+            <span>Open Dashboard</span>
+            <FiExternalLink size={16} />
+          </button>
+        </div>
+
         {/* Default View */}
         <div className="bg-gray-50 rounded-xl p-4">
           <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { FiSave, FiRefreshCw, FiMap, FiList, FiExternalLink } from 'react-icons/fi';
+import { MdUpgrade } from 'react-icons/md';
 import toast from 'react-hot-toast';
-import { initializeWixClient, updateWidgetConfig, getCompId, setInstanceToken } from '../wix-integration';
-import { widgetConfigService, WidgetConfig, AuthInfo } from '../services/api';
+import { initializeWixClient, updateWidgetConfig, getCompId, setInstanceToken, getInstanceId, setInstanceId } from '../wix-integration';
+import { widgetConfigService, WidgetConfig, AuthInfo, premiumAPI } from '../services/api';
 
 const colorOptions = [
   { value: '#3B82F6', label: 'Blue', class: 'bg-blue-500' },
@@ -34,14 +35,28 @@ function WidgetSettingsCompact() {
   const [loading, setLoading] = useState(!localStorage.getItem('mapsy-widget-config'));
   const [saving, setSaving] = useState(false);
   const [dashboardUrl, setDashboardUrl] = useState('https://mapsy-dashboard.nextechspires.com/');
+  const [premiumPlan, setPremiumPlan] = useState<string>('free');
+  const [instanceIdState, setInstanceIdState] = useState<string>('');
 
   useEffect(() => {
     const init = async () => {
       await initializeWixClient();
       await fetchConfig();
+      await loadPremiumStatus();
     };
     init();
   }, []);
+
+  const loadPremiumStatus = async () => {
+    try {
+      const premiumData = await premiumAPI.getPremiumStatus();
+      if (premiumData && premiumData.premiumPlanName) {
+        setPremiumPlan(premiumData.premiumPlanName);
+      }
+    } catch (error) {
+      console.error('Error fetching premium status:', error);
+    }
+  };
 
   const buildDashboardUrl = (authInfo?: AuthInfo) => {
     const baseUrl = new URL('https://mapsy-dashboard.nextechspires.com/');
@@ -56,6 +71,12 @@ function WidgetSettingsCompact() {
       baseUrl.searchParams.set('compId', compId);
     }
 
+    if (authInfo?.instanceId) {
+      baseUrl.searchParams.set('instanceId', authInfo.instanceId);
+      setInstanceId(authInfo.instanceId);
+      setInstanceIdState(authInfo.instanceId);
+    }
+
     setDashboardUrl(baseUrl.toString());
   };
 
@@ -66,6 +87,12 @@ function WidgetSettingsCompact() {
       setConfig(data);
       // Update cache with server data
       localStorage.setItem('mapsy-widget-config', JSON.stringify(data));
+
+      // Extract premium plan if available
+      if (data.premiumPlanName) {
+        setPremiumPlan(data.premiumPlanName);
+      }
+
       buildDashboardUrl(data.auth);
     } catch (error) {
       console.error('Error fetching config:', error);
@@ -112,6 +139,17 @@ function WidgetSettingsCompact() {
     }
   };
 
+  const handleUpgrade = () => {
+    const APP_ID = 'YOUR_MAPSY_APP_ID'; // Replace with actual Mapsy app ID
+
+    // Try to get instanceId from state, or fall back to URL parameter
+    const effectiveInstanceId = instanceIdState || getInstanceId();
+
+    const upgradeUrl = `https://www.wix.com/apps/upgrade/${APP_ID}${effectiveInstanceId ? `?appInstanceId=${effectiveInstanceId}` : ''}`;
+    console.log('Opening upgrade URL:', upgradeUrl, 'instanceId:', effectiveInstanceId);
+    window.open(upgradeUrl, '_blank');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -122,8 +160,19 @@ function WidgetSettingsCompact() {
 
   return (
     <div className="h-full flex flex-col p-3 bg-gradient-to-br from-gray-50 to-white">
-      {/* Header with Dashboard Button */}
-      <div className="mb-3 pb-2 border-b border-gray-100 flex items-center justify-end">
+      {/* Header with Upgrade and Dashboard Buttons */}
+      <div className="mb-3 pb-2 border-b border-gray-100 flex items-center justify-end gap-2">
+        {/* Upgrade Button - Only show if not on highest plan */}
+        {premiumPlan !== 'business-pro' && (
+          <button
+            onClick={handleUpgrade}
+            className="inline-flex items-center px-2 py-1 text-xs border-2 border-blue-500 text-blue-600 rounded-md hover:bg-blue-50 transition-all cursor-pointer"
+          >
+            <MdUpgrade className="mr-1 h-3 w-3" />
+            Upgrade
+          </button>
+        )}
+
         <button
           onClick={() => window.open(dashboardUrl, '_blank')}
           className="inline-flex items-center px-2 py-1 text-xs bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:from-blue-700 hover:to-purple-700 transition-all cursor-pointer"
