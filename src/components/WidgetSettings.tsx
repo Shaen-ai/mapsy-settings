@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { FiSave, FiEye, FiEyeOff, FiMap, FiList, FiExternalLink } from 'react-icons/fi';
 import { MdDashboard, MdUpgrade } from 'react-icons/md';
 import toast from 'react-hot-toast';
-import { widgetConfigService, WidgetConfig, premiumAPI } from '../services/api';
+import { widgetConfigService, WidgetConfig } from '../services/api';
 import { updateWidgetConfig, getDashboardUrl, getInstanceId, setInstanceId } from '../wix-integration';
 
 interface WidgetSettingsProps {
@@ -27,7 +27,6 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
 
   useEffect(() => {
     fetchConfig();
-    loadPremiumStatus();
     buildDashboard();
   }, []);
 
@@ -46,17 +45,6 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
       }
     } catch (error) {
       console.error('Error fetching widget config:', error);
-    }
-  };
-
-  const loadPremiumStatus = async () => {
-    try {
-      const premiumData = await premiumAPI.getPremiumStatus();
-      if (premiumData && premiumData.premiumPlanName) {
-        setPremiumPlan(premiumData.premiumPlanName);
-      }
-    } catch (error) {
-      console.error('Error fetching premium status:', error);
     }
   };
 
