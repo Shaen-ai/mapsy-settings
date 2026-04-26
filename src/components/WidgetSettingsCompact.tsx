@@ -3,7 +3,7 @@ import { FiSave, FiRefreshCw, FiMap, FiList, FiExternalLink } from 'react-icons/
 import { MdUpgrade } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import { initializeWixClient, updateWidgetConfig, getCompId, setInstanceToken, getInstanceId, setInstanceId } from '../wix-integration';
-import { widgetConfigService, WidgetConfig, AuthInfo, premiumAPI } from '../services/api';
+import { widgetConfigService, WidgetConfig, AuthInfo } from '../services/api';
 
 const colorOptions = [
   { value: '#3B82F6', label: 'Blue', class: 'bg-blue-500' },
@@ -42,21 +42,9 @@ function WidgetSettingsCompact() {
     const init = async () => {
       await initializeWixClient();
       await fetchConfig();
-      await loadPremiumStatus();
     };
     init();
   }, []);
-
-  const loadPremiumStatus = async () => {
-    try {
-      const premiumData = await premiumAPI.getPremiumStatus();
-      if (premiumData && premiumData.premiumPlanName) {
-        setPremiumPlan(premiumData.premiumPlanName);
-      }
-    } catch (error) {
-      console.error('Error fetching premium status:', error);
-    }
-  };
 
   const buildDashboardUrl = (authInfo?: AuthInfo) => {
     const baseUrl = new URL('https://mapsy-dashboard.nextechspires.com/');

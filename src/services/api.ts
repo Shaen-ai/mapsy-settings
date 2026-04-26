@@ -44,11 +44,6 @@ export interface WidgetConfig {
   premiumPlanName?: string;
 }
 
-export interface PremiumStatus {
-  premiumPlanName: string;
-  isPremium: boolean;
-}
-
 export const widgetConfigService = {
   getConfig: async (): Promise<WidgetConfig> => {
     return apiRequest<WidgetConfig>('/widget-config', { method: 'GET' });
@@ -61,10 +56,3 @@ export const widgetConfigService = {
     });
   },
 };
-
-export const premiumAPI = {
-  getPremiumStatus: async (): Promise<PremiumStatus> => {
-    return apiRequest<PremiumStatus>('/premium/status', { method: 'GET' });
-  },
-};
-
