@@ -93,6 +93,68 @@ export function getInstanceId(): string | null {
   return null;
 }
 
+/**
+ * Decode instanceId from an OauthNG.JWS Authorization token (client-side, no verify).
+ */
+function extractInstanceIdFromOauthNgToken(token: string): string | null {
+  try {
+    const prefix = 'OauthNG.JWS.';
+    if (!token.startsWith(prefix)) return null;
+
+    const jwtPart = token.slice(prefix.length);
+    const parts = jwtPart.split('.');
+    if (parts.length < 2) return null;
+
+    const payloadSegment = parts[1];
+    const normalized = payloadSegment.replace(/-/g, '+').replace(/_/g, '/');
+    const padding = (4 - (normalized.length % 4)) % 4;
+    const payloadJson = atob(normalized + '='.repeat(padding));
+    const payload = JSON.parse(payloadJson);
+
+    let data: any = payload;
+    if (typeof payload.data === 'string') {
+      data = JSON.parse(payload.data);
+    } else if (payload.data && typeof payload.data === 'object') {
+      data = payload.data;
+    }
+
+    return data?.instance?.instanceId || data?.instanceId || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Pull the editor Authorization token into module state so dashboard links include ?instance=.
+ */
+export async function captureAuthFromEditor(): Promise<void> {
+  if (!wixClient?.auth?.getAuthHeaders) {
+    return;
+  }
+
+  try {
+    const authResult = await wixClient.auth.getAuthHeaders();
+    const authHeader =
+      authResult?.headers?.Authorization ||
+      (authResult?.headers as Record<string, string> | undefined)?.authorization;
+
+    if (authHeader) {
+      instanceToken = authHeader;
+      console.log('[Settings] ✅ Captured instance token from editor.auth');
+
+      if (!instanceId) {
+        const decodedId = extractInstanceIdFromOauthNgToken(authHeader);
+        if (decodedId) {
+          instanceId = decodedId;
+          console.log('[Settings] ✅ Decoded instanceId from token:', instanceId);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[Settings] ⚠️ Could not capture auth from editor:', e);
+  }
+}
+
 // ----------------------
 // Authenticated fetch
 // ----------------------
@@ -173,10 +235,14 @@ export async function initializeWixClient(): Promise<boolean> {
       }
     }
 
+    // Capture editor Authorization token for dashboard links
+    await captureAuthFromEditor();
+
     // Log authentication status
     console.log('[Settings] 🔑 Authentication status:', {
       hasInstanceToken: !!instanceToken,
       hasCompId: !!compId,
+      hasInstanceId: !!instanceId,
       hasWixClient: !!wixClient,
       hasWixFetchWithAuth: !!(wixClient?.fetchWithAuth)
     });
@@ -238,9 +304,14 @@ export async function updateWidgetConfig(config: Record<string, any>, onlyChange
 // ----------------------
 // Generate dashboard URL
 // Always rebuilds from the latest known auth sources at call time:
-// module state, iframe ?instance=, and tokens saved from /widget-config.
+// module state, iframe ?instance=, editor.auth, and tokens saved from /widget-config.
 // ----------------------
-export function getDashboardUrl(baseUrl: string = 'https://mapsy-dashboard.nextechspires.com/'): string {
+export async function getDashboardUrl(
+  baseUrl: string = 'https://mapsy-dashboard.nextechspires.com/'
+): Promise<string> {
+  // Refresh token from editor right before opening (tokens expire)
+  await captureAuthFromEditor();
+
   const url = new URL(baseUrl);
 
   const token = getInstanceToken();

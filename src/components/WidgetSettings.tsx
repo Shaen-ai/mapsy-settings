@@ -68,10 +68,16 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
     }
   };
 
-  const openDashboard = () => {
-    const url = getDashboardUrl();
+  const openDashboard = async () => {
+    // Open synchronously to avoid popup blockers, then set URL after auth capture
+    const popup = window.open('about:blank', '_blank');
+    const url = await getDashboardUrl();
     console.log('Opening dashboard with URL:', url);
-    window.open(url, '_blank');
+    if (popup) {
+      popup.location.href = url;
+    } else {
+      window.open(url, '_blank');
+    }
   };
 
   const saveConfig = async () => {
