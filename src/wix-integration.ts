@@ -48,11 +48,27 @@ function generateCompId(): string {
 // Exports (for external modules)
 // ----------------------
 export function setInstanceToken(token: string): void {
-  instanceToken = token;
+  if (token) {
+    instanceToken = token;
+  }
+}
+
+export function getInstanceToken(): string | null {
+  if (instanceToken) return instanceToken;
+  if (typeof window !== 'undefined') {
+    const urlInstance = new URLSearchParams(window.location.search).get('instance');
+    if (urlInstance) {
+      instanceToken = urlInstance;
+      return instanceToken;
+    }
+  }
+  return null;
 }
 
 export function setCompId(id: string): void {
-  compId = id;
+  if (id) {
+    compId = id;
+  }
 }
 
 export function getCompId(): string | null {
@@ -60,11 +76,21 @@ export function getCompId(): string | null {
 }
 
 export function setInstanceId(id: string): void {
-  instanceId = id;
+  if (id) {
+    instanceId = id;
+  }
 }
 
 export function getInstanceId(): string | null {
-  return instanceId;
+  if (instanceId) return instanceId;
+  if (typeof window !== 'undefined') {
+    const urlInstanceId = new URLSearchParams(window.location.search).get('instanceId');
+    if (urlInstanceId) {
+      instanceId = urlInstanceId;
+      return instanceId;
+    }
+  }
+  return null;
 }
 
 // ----------------------
@@ -211,12 +237,30 @@ export async function updateWidgetConfig(config: Record<string, any>, onlyChange
 
 // ----------------------
 // Generate dashboard URL
+// Always rebuilds from the latest known auth sources at call time:
+// module state, iframe ?instance=, and tokens saved from /widget-config.
 // ----------------------
 export function getDashboardUrl(baseUrl: string = 'https://mapsy-dashboard.nextechspires.com/'): string {
   const url = new URL(baseUrl);
-  if (instanceToken) url.searchParams.set('instance', instanceToken);
-  if (compId) url.searchParams.set('compId', compId);
-  if (instanceId) url.searchParams.set('instanceId', instanceId);
+
+  const token = getInstanceToken();
+  const currentCompId = getCompId();
+  const currentInstanceId = getInstanceId();
+
+  if (token) {
+    url.searchParams.set('instance', token);
+  } else {
+    console.warn('[Settings] ⚠️ Opening dashboard without instance token — auth may fail');
+  }
+
+  if (currentCompId) {
+    url.searchParams.set('compId', currentCompId);
+  }
+
+  if (currentInstanceId) {
+    url.searchParams.set('instanceId', currentInstanceId);
+  }
+
   return url.toString();
 }
 

@@ -2,7 +2,15 @@ import { useState, useEffect } from 'react';
 import { FiSave, FiRefreshCw, FiMap, FiList, FiExternalLink } from 'react-icons/fi';
 import { MdUpgrade } from 'react-icons/md';
 import toast from 'react-hot-toast';
-import { initializeWixClient, updateWidgetConfig, getCompId, setInstanceToken, getInstanceId, setInstanceId } from '../wix-integration';
+import {
+  initializeWixClient,
+  updateWidgetConfig,
+  setCompId,
+  setInstanceToken,
+  getInstanceId,
+  setInstanceId,
+  getDashboardUrl,
+} from '../wix-integration';
 import { widgetConfigService, WidgetConfig, AuthInfo } from '../services/api';
 
 const colorOptions = [
@@ -34,7 +42,6 @@ function WidgetSettingsCompact() {
   });
   const [loading, setLoading] = useState(!localStorage.getItem('mapsy-widget-config'));
   const [saving, setSaving] = useState(false);
-  const [dashboardUrl, setDashboardUrl] = useState('https://mapsy-dashboard.nextechspires.com/');
   const [premiumPlan, setPremiumPlan] = useState<string>('free');
   const [instanceIdState, setInstanceIdState] = useState<string>('');
 
@@ -46,26 +53,25 @@ function WidgetSettingsCompact() {
     init();
   }, []);
 
-  const buildDashboardUrl = (authInfo?: AuthInfo) => {
-    const baseUrl = new URL('https://mapsy-dashboard.nextechspires.com/');
-
+  /** Merge auth from API without wiping iframe/module tokens when API returns null. */
+  const applyAuthInfo = (authInfo?: AuthInfo) => {
     if (authInfo?.instanceToken) {
-      baseUrl.searchParams.set('instance', authInfo.instanceToken);
       setInstanceToken(authInfo.instanceToken);
     }
-
-    const compId = authInfo?.compId || getCompId();
-    if (compId) {
-      baseUrl.searchParams.set('compId', compId);
+    // Only set when present — never overwrite existing module/iframe token with null
+    if (authInfo?.compId) {
+      setCompId(authInfo.compId);
     }
-
     if (authInfo?.instanceId) {
-      baseUrl.searchParams.set('instanceId', authInfo.instanceId);
       setInstanceId(authInfo.instanceId);
       setInstanceIdState(authInfo.instanceId);
     }
+  };
 
-    setDashboardUrl(baseUrl.toString());
+  const openDashboard = () => {
+    const url = getDashboardUrl();
+    console.log('[Settings] Opening dashboard with URL:', url);
+    window.open(url, '_blank');
   };
 
   const fetchConfig = async () => {
@@ -81,7 +87,7 @@ function WidgetSettingsCompact() {
         setPremiumPlan(data.premiumPlanName);
       }
 
-      buildDashboardUrl(data.auth);
+      applyAuthInfo(data.auth);
     } catch (error) {
       console.error('Error fetching config:', error);
       // Don't show error toast if we have cached data
@@ -162,7 +168,7 @@ function WidgetSettingsCompact() {
         )}
 
         <button
-          onClick={() => window.open(dashboardUrl, '_blank')}
+          onClick={openDashboard}
           className="inline-flex items-center px-2 py-1 text-xs bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:from-blue-700 hover:to-purple-700 transition-all cursor-pointer"
         >
           <FiExternalLink className="mr-1 h-3 w-3" />

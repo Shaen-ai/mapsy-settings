@@ -3,7 +3,15 @@ import { FiSave, FiEye, FiEyeOff, FiMap, FiList, FiExternalLink } from 'react-ic
 import { MdDashboard, MdUpgrade } from 'react-icons/md';
 import toast from 'react-hot-toast';
 import { widgetConfigService, WidgetConfig } from '../services/api';
-import { updateWidgetConfig, getDashboardUrl, getInstanceId, setInstanceId } from '../wix-integration';
+import {
+  updateWidgetConfig,
+  getDashboardUrl,
+  getInstanceId,
+  setInstanceId,
+  setInstanceToken,
+  setCompId,
+  initializeWixClient,
+} from '../wix-integration';
 
 interface WidgetSettingsProps {
   onClose?: () => void;
@@ -23,11 +31,17 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
   const [loading, setLoading] = useState(false);
   const [premiumPlan, setPremiumPlan] = useState<string>('free');
   const [instanceIdState, setInstanceIdState] = useState<string>('');
-  const [dashboardUrl, setDashboardUrl] = useState<string>('');
 
   useEffect(() => {
-    fetchConfig();
-    buildDashboard();
+    const init = async () => {
+      await initializeWixClient();
+      await fetchConfig();
+      const urlInstanceId = getInstanceId();
+      if (urlInstanceId) {
+        setInstanceIdState(urlInstanceId);
+      }
+    };
+    init();
   }, []);
 
   const fetchConfig = async () => {
@@ -35,9 +49,15 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
       const data = await widgetConfigService.getConfig();
       setConfig(data);
 
-      // Extract premium plan and instanceId from config if available
+      // Extract premium plan and auth from config if available — never wipe existing tokens
       if (data.premiumPlanName) {
         setPremiumPlan(data.premiumPlanName);
+      }
+      if (data.auth?.instanceToken) {
+        setInstanceToken(data.auth.instanceToken);
+      }
+      if (data.auth?.compId) {
+        setCompId(data.auth.compId);
       }
       if (data.auth?.instanceId) {
         setInstanceId(data.auth.instanceId);
@@ -48,15 +68,10 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
     }
   };
 
-  const buildDashboard = () => {
+  const openDashboard = () => {
     const url = getDashboardUrl();
-    setDashboardUrl(url);
-
-    // Extract instanceId from URL if not already set
-    const urlInstanceId = getInstanceId();
-    if (urlInstanceId) {
-      setInstanceIdState(urlInstanceId);
-    }
+    console.log('Opening dashboard with URL:', url);
+    window.open(url, '_blank');
   };
 
   const saveConfig = async () => {
@@ -111,12 +126,8 @@ const WidgetSettings: React.FC<WidgetSettingsProps> = ({ onClose }) => {
           {/* Dashboard Button */}
           <button
             type="button"
-            onClick={() => {
-              console.log('Opening dashboard with URL:', dashboardUrl);
-              window.open(dashboardUrl || getDashboardUrl(), '_blank');
-            }}
-            disabled={!dashboardUrl}
-            className="w-full px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all flex items-center justify-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={openDashboard}
+            className="w-full px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all flex items-center justify-center gap-2 font-medium"
           >
             <MdDashboard size={20} />
             <span>Open Dashboard</span>
